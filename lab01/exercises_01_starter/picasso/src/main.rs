@@ -27,10 +27,10 @@ fn print_img(img: Image) {
         for x in 0..width {
             let pix = img.get_pixel(x, y);
             match pix {
-                bmp::consts::RED => print!(" R "),
-                bmp::consts::BLUE => print!(" B "),
-                bmp::consts::LIME => print!(" G "),
-                bmp::consts::WHITE => print!(" W "),
+                bmp::consts::RED => print!("R "),
+                bmp::consts::BLUE => print!("B "),
+                bmp::consts::LIME => print!("G "),
+                bmp::consts::WHITE => print!("W "),
                 _ => print!("X"),
             }
             if x == width - 1 {

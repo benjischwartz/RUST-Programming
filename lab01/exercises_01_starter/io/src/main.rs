@@ -3,13 +3,13 @@ use std::io::Write;
 
 fn main() {
     let mut input = String::new();
-    print!("Hello! What is your name: ");
+    print!("What is your name? ");
     let _ = io::stdout().flush();
     io::stdin().read_line(&mut input).expect("Error reading from STDIN");
-    input.pop();
-    if input.len() == 0 {
-        println!("You didn't enter a name!");
+    //input.pop();
+    if input.len() == 1 {
+        println!("No name entered :(, goodbye.");
     } else {
-        println!("Hello, {input}! Nice to meet you :)");
+        println!("Hello, {input}, nice to meet you!");
     }
 }
