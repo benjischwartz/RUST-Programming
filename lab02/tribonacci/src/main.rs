@@ -29,11 +29,12 @@ fn compute_tribonacci(
     match size {
         Ok(size) => {
             let mut sum = size;
-            if size <= 3 {
-            } else {
+            if size > 3 {
+                sum = 3;
                 let mut i = 3;
                 while i < size {
                     v.push(v[i - 3] + v[i - 2] + v[i - 1]);
+                    let x = v[i];
                     sum = sum + v[i];
                     i = i + 1;
                 }
