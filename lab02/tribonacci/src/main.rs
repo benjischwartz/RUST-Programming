@@ -25,6 +25,22 @@ fn compute_tribonacci(
     // inside the `TribonacciError` struct
     error_msg: String,
 ) -> Result<(), TribonacciError> {
-    // TODO: complete this function!
-    Ok(())
+    let mut v = vec![1, 1, 1];
+    match size {
+        Ok(size) => {
+            if size <= 3 {
+            } else {
+                let mut i = 3;
+                while i < size {
+                    v.push(v[i - 3] + v[i - 2] + v[i - 1]);
+                    i = i + 1;
+                }
+            }
+            println!("Values: {v:?}");
+            Ok(())
+        }
+        Err(message) => {
+            Err(TribonacciError(error_msg))
+        }
+    }
 }
