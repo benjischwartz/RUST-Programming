@@ -24,8 +24,4 @@ fn main() {
 
     a.push(11);
     a.push(12);
-
-    for x in a {
-        println!("{x}");
-    }
 }
