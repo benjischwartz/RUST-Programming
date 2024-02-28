@@ -15,12 +15,51 @@ fn main() {
     // HashMap
     hash_map_operations();
 
-    // TODO: your text explanation to the questions in the spec
-    // Expectations (before starting):
-    // I expect that a Linked List insertion will be significantly slower than vec/vecdeque
-    // because it required O(n) for insert/delete, whereas vec/vecdeque is O(1) amortized.
-    // I expect that hashmap will have a similar performance to the first two since it is O(1)
-    // insert/delete.
+    /*
+    Expectations (before starting):
+    I expect that a Linked List insertion will be slower than vec/vecdeque
+    because even though it required O(1) for insert/delete, it is still slower because
+    of the following:
+    The last element of the list holds a null pointer. So you go through the list
+    by jumping from each element to the next. Also, when you want to append a new element,
+    you can just allocate memory for that one element anywhere in memory and let the last
+    element of the list point to that new element. This means inserting/deleting is O(1).
+    You never have to copy and reallocate data when growing your list.
+    However, this also means that indexing the list is incredibly slow, because you may have
+    to keep jumping through memory, whereas indexing an array always takes the same amount
+    of time, because you can just calculate the exact position of the nth element in
+    memory (begin + sizeof(int)*n.
+    I expect that hashmap will have a similar performance to the first two since it is O(1)
+    insert/delete.
+
+    Which collection type was the fastest for adding and removing elements?
+    Sequences were by the fastest.
+
+    Why do you think this was the case?
+    As mentioned before, inserting and deleting in sequences is fast (at the beginning or at
+    the end)because we can calculate the exact position of the nth element in memory.
+    The HashMap insert/delete was slower because we need to hash the key in order to get the
+    memory location of the value. This requires an additional calculation in the process,
+    hence why it was 172ms/131ms compared to 5.37ms/4.24ms for Vecs.
+
+    Is there any significant difference between Vec and VecDeque deletion?
+    They are very similar, but theoretically VecDeque should be slower than Vec.
+    In practice, VecDeque is marginally slower in insertion, and marginally
+    faster in deletion.
+
+    When would you consider using VecDeque over Vec?
+    The whole point of VecDeque is to make certain operations faster, namely pushing
+    and popping the start of the collection. Vec is very slow at this, especially if
+    there are a lot of items, because it involves moving all other items to make space.
+    The structure of VecDeque makes these operations fast but at the expense of performance
+    of other operations in comparison to Vec.
+
+    When would you consider using LinkedList over Vec?
+    I would use a Linked List when implementing a queue or a stack or when implementing graph
+    algorithms, since they are better suited for when you need to insert or delete elements
+    frequently. Arrays and vectors are better suited for situations where you need to access
+    elements at random, as this can be done in constant time.
+     */
 }
 
 /// measure the insertion and removal
