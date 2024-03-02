@@ -69,9 +69,6 @@ fn main() {
     let instructions = get_instructions_from_stdin();
     let mut tree = Tree::new();
 
-    println!("{instructions:?}");
-    println!("{tree:?}");
-
     let mut curr = tree.root.as_mut();
     for instruction in instructions.into_iter() {
         match instruction {
@@ -94,5 +91,5 @@ fn main() {
             }
         }
     }
-    println!("{:?}", tree.total_brightness / tree.total_lights);
+    println!("{}", tree.total_brightness / tree.total_lights);
 }
