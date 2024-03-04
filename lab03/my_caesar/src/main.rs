@@ -11,13 +11,36 @@ fn main() {
         .unwrap_or(DEFAULT_SHIFT);
     
     for line in stdin().lock().lines() {
-        let shifted = shift(shift_by, line.expect("no input line"));
-
-        println!("Shifted ascii by {shift_by} is: {shifted}");
+        match line {
+            Ok(mut line) => {
+                let res = shift(shift_by, &line);
+                println!("Shifted ascii by {shift_by} is: {res}");
+            }
+            Err(_) => {
+                println!("no input line");
+            }
+        }
     }
 }
 
 
-fn shift(/*TODO*/) -> /*TODO*/ {
-    
+fn shift(shift: i32, line: &String) -> String {
+    let mut res = String::new();
+    res += &line
+        .chars()
+        .map(|c| shift_char(c, shift))
+        .collect::<String>();
+    res
+}
+
+fn shift_char(c: char, shift: i32) -> char {
+    if c >= 'a' && c <= 'z'
+    {
+        return ((c as u8 - 'a' as u8 + shift as u8) % 26 + 'a' as u8) as char
+    }
+    else if c >= 'A' && c <= 'Z'
+    {
+        return ((c as u8 - 'A' as u8 + shift as u8) % 26 + 'A' as u8) as char
+    }
+    c
 }
