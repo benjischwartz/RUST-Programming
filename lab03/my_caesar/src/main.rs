@@ -36,11 +36,11 @@ fn shift(shift: i32, line: &String) -> String {
 fn shift_char(c: char, shift: i32) -> char {
     if c >= 'a' && c <= 'z'
     {
-        return ((c as u8 - 'a' as u8 + shift as u8) % 26 + 'a' as u8) as char
+        return (((c as i32 - 'a' as i32 + shift) % 26) as u8 + 'a' as u8) as char
     }
     else if c >= 'A' && c <= 'Z'
     {
-        return ((c as u8 - 'A' as u8 + shift as u8) % 26 + 'A' as u8) as char
+        return (((c as i32 - 'A' as i32 + shift) % 26) as u8 + 'A' as u8) as char
     }
     c
 }
