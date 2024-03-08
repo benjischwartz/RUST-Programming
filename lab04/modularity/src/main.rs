@@ -1,11 +1,8 @@
 use std::num::ParseIntError;
 
-mod utils;
-mod constants;
-
-#[derive(Debug)]
-struct TribonacciError(String);
-
+use lib_crate::constants;
+use lib_crate::utils;
+use lib_crate::structs::TribonacciError;
 fn main() {
     let shift_size = utils::first_argument();
 
