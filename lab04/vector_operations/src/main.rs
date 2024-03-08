@@ -20,7 +20,6 @@ impl Vec3 {
     }
 }
 
-// define what the Addition operator does for Vec3
 impl std::ops::Add for Vec3 {
     type Output = Self;
 
@@ -33,10 +32,39 @@ impl std::ops::Add for Vec3 {
     }
 }
 
-// YOUR TASK:
-//  - Implement the `Sub` behaviour for `Vec3`
-//  - Implement the `Mul` behaviour for `Vec3`
-//  - Implement the `Div` behaviour for `Vec3`
+impl std::ops::Sub for Vec3 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+impl std::ops::Mul for Vec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
+    }
+}
+impl std::ops::Div for Vec3 {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+            z: self.z / rhs.z,
+        }
+    }
+}
 
 fn main() {
     let v1 = Vec3::new(1.0, 2.0, 3.0);
