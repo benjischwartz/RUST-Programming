@@ -13,6 +13,7 @@ pub enum Procedure {
     SETHEADING(f32),
     SETX(f32),
     SETY(f32),
+    MAKE(String, f32),
 }
 
 pub struct Token {
