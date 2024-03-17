@@ -86,9 +86,14 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                         return Err("Couldn't parse second arg!".to_string());
                                     }
                                 }
-                                    // TODO: Add in query condition
                                 else {
-                                    return Err("Expected arg!".to_string());
+                                    match get_query(value, cursor) {
+                                        Some(value) => {
+                                            let procedure = parse_procedure(token, Some(name), value).expect("Should be a valid command");
+                                            execute_procedure(image, procedure, cursor, variables);
+                                        },
+                                        None => {return Err("Expected arg!".to_string()); }
+                                    }
                                 }
                             }
                         }
@@ -181,4 +186,14 @@ fn move_cursor(image: &mut Image, cursor: &mut Cursor, direction: i32, length: f
     let coords = get_end_coordinates(cursor.x_coord, cursor.y_coord, direction, length);
     cursor.x_coord = coords.0;
     cursor.y_coord = coords.1;
+}
+
+fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32> {
+    match query {
+        "XCOR" => Some(cursor.x_coord),
+        "YCOR" => Some(cursor.y_coord),
+        "HEADING" => Some(cursor.direction as f32),
+        "COLOR" => Some(cursor.color_as_f32()),
+        _ => None,
+    }
 }
