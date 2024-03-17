@@ -14,6 +14,10 @@ pub enum Procedure {
     SETX(f32),
     SETY(f32),
     MAKE(String, f32),
+    XCOR,
+    YCOR,
+    HEADING,
+    COLOR,
 }
 
 pub struct Token {
@@ -66,6 +70,18 @@ impl Cursor {
 
     pub fn moveright(&mut self, value: f32) {
         self.x_coord += value;
+    }
+}
+
+impl Procedure {
+    pub fn name_to_procedure(name: &str) -> Procedure {
+        match name {
+            "XCOR" => Procedure::XCOR,
+            "YCOR" => Procedure::YCOR,
+            "HEADING" => Procedure::HEADING,
+            "COLOR" => Procedure::COLOR,
+            _ => Procedure::PENUP,
+        }
     }
 }
 

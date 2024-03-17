@@ -1,10 +1,12 @@
+use std::collections::HashMap;
 use std::fmt::Error;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::BufReader;
 use unsvg::{Image, Color, get_end_coordinates, COLORS};
 use crate::structs::{Cursor, Procedure};
 
-fn parse_procedure(token: &str, value: f32) -> Option<Procedure> {
+fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Procedure> {
     match token {
         "FORWARD" => Some(Procedure::FORWARD(value)),
         "BACK" => Some(Procedure::BACK(value)),
@@ -15,11 +17,16 @@ fn parse_procedure(token: &str, value: f32) -> Option<Procedure> {
         "SETHEADING" => Some(Procedure::SETHEADING(value)),
         "SETX" => Some(Procedure::SETX(value)),
         "SETY" => Some(Procedure::SETY(value)),
+        "MAKE" => Some(Procedure::MAKE(name.unwrap(), value)),
+        "XCOR" => Some(Procedure::XCOR),
+        "YCOR" => Some(Procedure::YCOR),
+        "HEADING" => Some(Procedure::HEADING),
+        "COLOR" => Some(Procedure::COLOR),
         _ => None
     }
 }
 
-pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor) -> Result<usize, String> {
+pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<usize, String> {
     if line.starts_with("//") {
         println!("Skipping... comment");
         return Ok(0);
@@ -31,20 +38,32 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor) -> Result
     while let Some(token) = iter.next() {
         match *token {
             "PENUP" => {
-                execute_procedure(image, Procedure::PENUP, cursor);
+                execute_procedure(image, Procedure::PENUP, cursor, variables);
             },
             "PENDOWN" => {
-                execute_procedure(image, Procedure::PENDOWN, cursor);
+                execute_procedure(image, Procedure::PENDOWN, cursor, variables);
             },
             "FORWARD" | "BACK" | "LEFT" | "RIGHT" | "SETPENCOLOR" | "TURN" | "SETHEADING" | "SETX" | "SETY" => {
                 if let Some(value) = iter.next() {
                     if value.starts_with('"') {
-                        if let Ok(val) = value.trim_matches('"').parse::<f32>() {
-                            let procedure = parse_procedure(token, val).expect("Should be a valid command");
-                            execute_procedure(image, procedure, cursor);
+                        if let Ok(value) = value.trim_matches('"').parse::<f32>() {
+                            let procedure = parse_procedure(token, None, value).expect("Should be a valid command");
+                            execute_procedure(image, procedure, cursor, variables);
                         }
                         else {
                             return Err("Couldn't parse arg!".to_string());
+                        }
+                    }
+                    else if value.starts_with(':') {
+                        let name = value.trim_matches(':').to_string();
+                        match variables.get(&name) {
+                            Some(value) => {
+                                let procedure = parse_procedure(token, None, *value).expect("Should be a valid command");
+                                execute_procedure(image, procedure, cursor, variables);
+                            },
+                            None => {
+                                return Err("No matching variable found".to_string());
+                            }
                         }
                     }
                     else {
@@ -53,6 +72,35 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor) -> Result
                 }
                 else { return Err("Not enough args!".to_string())};
             },
+            "MAKE" => {
+                if let Some(name) = iter.next() {
+                    if name.starts_with('"') {
+                        if let Ok(name) = name.trim_matches('"').parse::<String>() {
+                            if let Some(value) = iter.next() {
+                                if value.starts_with('"') {
+                                    if let Ok(value) = value.trim_matches('"') .parse::<f32>() {
+                                        let procedure = parse_procedure(token, Some(name), value).expect("Should be a valid command");
+                                        execute_procedure(image, procedure, cursor, variables);
+                                    }
+                                    else {
+                                        return Err("Couldn't parse second arg!".to_string());
+                                    }
+                                }
+                                    // TODO: Add in query condition
+                                else {
+                                    return Err("Expected arg!".to_string());
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        return Err("Couldn't parse variable name!".to_string());
+                    }
+                }
+                else {
+                    return Err("Expected arg!".to_string())
+                };
+            }
             value => {
                 if value.starts_with('"') {
                     value.trim_matches('"').parse::<f32>();
@@ -67,7 +115,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor) -> Result
     Ok(0)
 }
 
-fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Cursor) -> Result<(), String> {
+fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<(), String> {
     println!("Procedure is {:?}", procedure);
     match procedure {
         Procedure::PENUP => {
@@ -114,6 +162,12 @@ fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Curso
         Procedure::SETY(value) => {
             cursor.y_coord = value;
         },
+        Procedure::MAKE(name, value) => {
+            println!("Updating variables...");
+            println!("Adding {name}, {value}");
+            variables.insert(name, value);
+        }
+        _ => { todo!()}
     };
     Ok(())
 }

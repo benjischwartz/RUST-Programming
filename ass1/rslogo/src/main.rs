@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use unsvg::Image;
 use std::fs::File;
+use std::hash::Hash;
 use clap::Parser;
 use lib_crate::utils;
 use std::io::{BufRead, BufReader};
@@ -32,6 +34,7 @@ fn main() -> Result<(), i32>
 
     let mut image = Image::new(width, height);
     let mut cursor = Cursor::new((width / 2) as f32, (height / 2) as f32);
+    let mut variables: HashMap<String, f32> = HashMap::new();
 
     // Work line by line, parsing then executing program
     let file = match File::open(&file_path) {
@@ -52,7 +55,7 @@ fn main() -> Result<(), i32>
                 return Err(1);
             }
         };
-        match utils::handle_line(&line, &mut image, &mut cursor) {
+        match utils::handle_line(&line, &mut image, &mut cursor, &mut variables) {
             Ok(_) => {},
             Err(err) => {
                 eprintln!("{err}");
