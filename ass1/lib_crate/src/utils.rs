@@ -104,7 +104,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                     let variable = value.trim_matches(':').to_string();
                                     match variables.get(&variable) {
                                         Some(value) => {
-                                            let procedure = parse_procedure(token, Some(variable), *value)
+                                            let procedure = parse_procedure(token, Some(name), *value)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
                                         },
@@ -201,7 +201,9 @@ fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Curso
             println!("Adding {value} to {name}");
             match variables.get_mut(&name) {
                 Some(val) => {
-                    *val += value;
+                    println!("old {val}");
+                    *val = *val + value;
+                    println!("new {val}");
                 },
                 None => {
                     return Err("Variable does not exist".to_string());
