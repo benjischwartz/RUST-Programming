@@ -85,7 +85,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                 }
                 else { return Err("Not enough args!".to_string())};
             },
-            "MAKE" | "ADDASSING" => {
+            "MAKE" | "ADDASSIGN" => {
                 if let Some(name) = iter.next() {
                     if name.starts_with('"') {
                         if let Ok(name) = name.trim_matches('"').parse::<String>() {
@@ -100,10 +100,24 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                         return Err("Couldn't parse second arg!".to_string());
                                     }
                                 }
+                                else if value.starts_with(':') {
+                                    let variable = value.trim_matches(':').to_string();
+                                    match variables.get(&variable) {
+                                        Some(value) => {
+                                            let procedure = parse_procedure(token, Some(variable), *value)
+                                                .expect("Should be a valid command");
+                                            execute_procedure(image, procedure, cursor, variables);
+                                        },
+                                        None => {
+                                            return Err("No matching variable found".to_string());
+                                        }
+                                    }
+                                }
                                 else {
                                     match get_query(value, cursor) {
                                         Some(value) => {
-                                            let procedure = parse_procedure(token, Some(name), value).expect("Should be a valid command");
+                                            let procedure = parse_procedure(token, Some(name), value)
+                                                .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
                                         },
                                         None => {return Err("Expected arg!".to_string()); }
@@ -184,6 +198,7 @@ fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Curso
         },
         Procedure::ADDASSIGN(name, value) => {
             println!("Updating variables...");
+            println!("Adding {value} to {name}");
             match variables.get_mut(&name) {
                 Some(val) => {
                     *val += value;
