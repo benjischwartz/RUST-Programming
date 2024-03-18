@@ -18,6 +18,7 @@ pub enum Procedure {
     YCOR,
     HEADING,
     COLOR,
+    ADDASSIGN(String, f32),
 }
 
 pub struct Token {

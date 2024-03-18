@@ -22,6 +22,7 @@ fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Proc
         "YCOR" => Some(Procedure::YCOR),
         "HEADING" => Some(Procedure::HEADING),
         "COLOR" => Some(Procedure::COLOR),
+        "ADDASSIGN" => Some(Procedure::ADDASSIGN(name.unwrap(), value)),
         _ => None
     }
 }
@@ -43,8 +44,10 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
             "PENDOWN" => {
                 execute_procedure(image, Procedure::PENDOWN, cursor, variables);
             },
-            "FORWARD" | "BACK" | "LEFT" | "RIGHT" | "SETPENCOLOR" | "TURN" | "SETHEADING" | "SETX" | "SETY" => {
+            "FORWARD" | "BACK" | "LEFT" | "RIGHT" | "SETPENCOLOR" |
+            "TURN" | "SETHEADING" | "SETX" | "SETY" => {
                 if let Some(value) = iter.next() {
+                    // VALUE CASE
                     if value.starts_with('"') {
                         if let Ok(value) = value.trim_matches('"').parse::<f32>() {
                             let procedure = parse_procedure(token, None, value).expect("Should be a valid command");
@@ -54,11 +57,13 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                             return Err("Couldn't parse arg!".to_string());
                         }
                     }
+                    // VARIABLE CASE
                     else if value.starts_with(':') {
                         let name = value.trim_matches(':').to_string();
                         match variables.get(&name) {
                             Some(value) => {
-                                let procedure = parse_procedure(token, None, *value).expect("Should be a valid command");
+                                let procedure = parse_procedure(token, None, *value)
+                                    .expect("Should be a valid command");
                                 execute_procedure(image, procedure, cursor, variables);
                             },
                             None => {
@@ -66,20 +71,29 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                             }
                         }
                     }
+                    // TODO: Check if need to add Query case
                     else {
-                        return Err("Expected arg!".to_string());
+                        match get_query(value, cursor) {
+                            Some(value) => {
+                                let procedure = parse_procedure(token, None, value)
+                                    .expect("Should be a valid command");
+                                execute_procedure(image, procedure, cursor, variables);
+                            },
+                            None => {return Err("Expected arg!".to_string()); }
+                        }
                     }
                 }
                 else { return Err("Not enough args!".to_string())};
             },
-            "MAKE" => {
+            "MAKE" | "ADDASSING" => {
                 if let Some(name) = iter.next() {
                     if name.starts_with('"') {
                         if let Ok(name) = name.trim_matches('"').parse::<String>() {
                             if let Some(value) = iter.next() {
                                 if value.starts_with('"') {
                                     if let Ok(value) = value.trim_matches('"') .parse::<f32>() {
-                                        let procedure = parse_procedure(token, Some(name), value).expect("Should be a valid command");
+                                        let procedure = parse_procedure(token, Some(name), value)
+                                            .expect("Should be a valid command");
                                         execute_procedure(image, procedure, cursor, variables);
                                     }
                                     else {
@@ -120,7 +134,8 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
     Ok(0)
 }
 
-fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<(), String> {
+fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<(), String>
+{
     println!("Procedure is {:?}", procedure);
     match procedure {
         Procedure::PENUP => {
@@ -166,6 +181,17 @@ fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Curso
         },
         Procedure::SETY(value) => {
             cursor.y_coord = value;
+        },
+        Procedure::ADDASSIGN(name, value) => {
+            println!("Updating variables...");
+            match variables.get_mut(&name) {
+                Some(val) => {
+                    *val += value;
+                },
+                None => {
+                    return Err("Variable does not exist".to_string());
+                }
+            }
         },
         Procedure::MAKE(name, value) => {
             println!("Updating variables...");
