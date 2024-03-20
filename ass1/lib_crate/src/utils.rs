@@ -305,7 +305,7 @@ pub fn check_equality(line: &str, cursor: &mut Cursor, variables: &mut HashMap<S
     Ok(a == b)
 }
 
-pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> usize
+pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> Result<usize, String>
 {
     let mut condition_count = 1;
     while condition_count != 0 && line_number < lines.len() {
@@ -318,7 +318,10 @@ pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> 
         }
         line_number = line_number + 1;
     }
-    line_number
+    if condition_count > 0 {
+        return Err("No matching bracket found!".to_string());
+    }
+    Ok(line_number)
 }
 
 fn get_bool_as_f32(value: &str) -> Option<f32>
