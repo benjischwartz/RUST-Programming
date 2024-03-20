@@ -286,10 +286,11 @@ pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> 
 {
     let mut condition_count = 1;
     while condition_count != 0 && line_number < lines.len() {
-        if lines[line_number].ends_with("[") {
+        let line = lines[line_number].trim();
+        if line.ends_with("[") {
             condition_count = condition_count + 1
         }
-        else if lines[line_number].starts_with("]") {
+        else if line.starts_with("]") {
             condition_count = condition_count - 1;
         }
         line_number = line_number + 1;

@@ -47,28 +47,11 @@ fn main() -> Result<(), i32>
 
     let reader = BufReader::new(file);
 
-    // for line_result in reader.lines() {
-    //     let line = match line_result {
-    //         Ok(l) => l,
-    //         Err(err) => {
-    //             eprintln!("Error reading line: {err}");
-    //             return Err(1);
-    //         }
-    //     };
-    //     match utils::handle_line(&line, &mut image, &mut cursor, &mut variables) {
-    //         Ok(_) => {},
-    //         Err(err) => {
-    //             eprintln!("{err}");
-    //             return Err(1)
-    //         }
-    //     }
-    // }
-
     let mut lines = reader.lines().map(|l| l.unwrap()).collect::<Vec<_>>();
     let mut line_number = 0;
     while line_number < lines.len()
     {
-        let line = &lines[line_number];
+        let line = lines[line_number].trim();
         println!("Processing line: {line}");
         if line.starts_with("IF EQ") {
             match utils::check_equality(line.strip_prefix("IF EQ").unwrap(), &mut cursor, &mut variables) {
