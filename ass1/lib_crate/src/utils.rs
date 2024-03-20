@@ -83,7 +83,9 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                         }
                     }
                 }
-                return Err("Expected arg!".to_string());
+                else {
+                    return Err("Expected arg!".to_string());
+                }
             },
             "MAKE" | "ADDASSIGN" => {
                 if let Some(name) = iter.next() {
