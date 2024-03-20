@@ -100,7 +100,9 @@ fn main() -> Result<(), i32>
             // Check if this is the end of a while loop
             if return_map.contains_key(&line_number) {
                 line_number = *return_map.get(&line_number).expect("Key exists");
-                continue;
+            }
+            else {
+                line_number = line_number + 1;
             }
         }
         else {
