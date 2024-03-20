@@ -87,8 +87,18 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                         if let Ok(name) = name.trim_matches('"').parse::<String>() {
                             if let Some(value) = iter.next() {
                                 if value.starts_with('"') {
-                                    if let Ok(value) = value.trim_matches('"') .parse::<f32>() {
+                                    if let Ok(value) = value.trim_matches('"').parse::<f32>() {
                                         let procedure = parse_procedure(token, Some(name), value)
+                                            .expect("Should be a valid command");
+                                        execute_procedure(image, procedure, cursor, variables);
+                                    }
+                                    else if value.trim_matches('"') == "TRUE" {
+                                        let procedure = parse_procedure(token, Some(name), 1.0)
+                                            .expect("Should be a valid command");
+                                        execute_procedure(image, procedure, cursor, variables);
+                                    }
+                                    else if value.trim_matches('"') == "FALSE" {
+                                        let procedure = parse_procedure(token, Some(name), 0.0)
                                             .expect("Should be a valid command");
                                         execute_procedure(image, procedure, cursor, variables);
                                     }
@@ -246,10 +256,16 @@ pub fn check_equality(line: &str, cursor: &mut Cursor, variables: &mut HashMap<S
     let a: f32;
     let b: f32;
     if tokens[0].starts_with('"') {
-        a = match tokens[0].trim_matches('"').parse::<f32>(){
-            Ok(value) => value,
-            Err(_) => return Err("Failed to parse first arg!".to_string()),
-        };
+        let trimmed_token = tokens[0].trim_matches('"');
+        a = match get_bool_as_f32(trimmed_token) {
+            Some(a) => a,
+            None => {
+                match trimmed_token.parse::<f32>(){
+                    Ok(a) => a,
+                    Err(_) => return Err("Failed to parse first arg!".to_string()),
+                }
+            }
+        }
     } else if tokens[0].starts_with(':') {
         let name = tokens[0].trim_matches(':').to_string();
         a =  match variables.get(&name) {
@@ -263,10 +279,16 @@ pub fn check_equality(line: &str, cursor: &mut Cursor, variables: &mut HashMap<S
         };
     }
     if tokens[1].starts_with('"') {
-        b = match tokens[1].trim_matches('"').parse::<f32>(){
-            Ok(value) => value,
-            Err(_) => return Err("Failed to parse first arg!".to_string()),
-        };
+        let trimmed_token = tokens[1].trim_matches('"');
+        b = match get_bool_as_f32(trimmed_token) {
+            Some(b) => b,
+            None => {
+                match trimmed_token.parse::<f32>(){
+                    Ok(b) => b,
+                    Err(_) => return Err("Failed to parse first arg!".to_string()),
+                }
+            }
+        }
     } else if tokens[1].starts_with(':') {
         let name = tokens[1].trim_matches(':').to_string();
         b =  match variables.get(&name) {
@@ -296,4 +318,19 @@ pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> 
         line_number = line_number + 1;
     }
     line_number
+}
+
+fn get_bool_as_f32(value: &str) -> Option<f32>
+{
+    println!("in get bool function");
+    println!("value: {value}");
+    if value == "TRUE" {
+        Some(1.0)
+    }
+    else if value == "FALSE" {
+        Some(0.0)
+    }
+    else {
+        None
+    }
 }
