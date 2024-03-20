@@ -5,7 +5,7 @@ use std::hash::Hash;
 use clap::Parser;
 use lib_crate::utils;
 use std::io::{BufRead, BufReader};
-use lib_crate::structs::{Cursor, PenStatus};
+use lib_crate::structs::{Cursor};
 
 /// A simple program to parse four arguments using clap.
 
@@ -47,22 +47,67 @@ fn main() -> Result<(), i32>
 
     let reader = BufReader::new(file);
 
-    for line_result in reader.lines() {
-        let line = match line_result {
-            Ok(l) => l,
-            Err(err) => {
-                eprintln!("Error reading line: {err}");
-                return Err(1);
+    // for line_result in reader.lines() {
+    //     let line = match line_result {
+    //         Ok(l) => l,
+    //         Err(err) => {
+    //             eprintln!("Error reading line: {err}");
+    //             return Err(1);
+    //         }
+    //     };
+    //     match utils::handle_line(&line, &mut image, &mut cursor, &mut variables) {
+    //         Ok(_) => {},
+    //         Err(err) => {
+    //             eprintln!("{err}");
+    //             return Err(1)
+    //         }
+    //     }
+    // }
+
+    let mut lines = reader.lines().map(|l| l.unwrap()).collect::<Vec<_>>();
+    let mut line_number = 0;
+    while line_number < lines.len()
+    {
+        let line = &lines[line_number];
+        println!("Processing line: {line}");
+        if line.starts_with("IF EQ") {
+            match utils::check_equality(line.strip_prefix("IF EQ").unwrap(), &mut cursor, &mut variables) {
+                Ok(result) => {
+                    if result {
+                        println!("CONDITION IS TRUE");
+                        line_number = line_number + 1;
+                        continue;
+                    }
+                    else {
+                        println!("CONDITION IS FALSE");
+                        line_number = utils::jump_to_matching_bracket(line_number + 1, &lines);
+                        continue
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{err}");
+                    return Err(1)
+                }
             }
-        };
-        match utils::handle_line(&line, &mut image, &mut cursor, &mut variables) {
-            Ok(_) => {},
-            Err(err) => {
-                eprintln!("{err}");
-                return Err(1)
+            todo!()
+        }
+        else if line.starts_with("WHILE") {
+            todo!()
+        }
+        else {
+            if !line.starts_with(']') {
+                match utils::handle_line(line, &mut image, &mut cursor, &mut variables) {
+                    Ok(_) => {},
+                    Err(err) => {
+                        eprintln!("{err}");
+                        return Err(1)
+                    }
+                }
             }
+            line_number = line_number + 1;
         }
     }
+
 
     match image_path.extension().map(|s| s.to_str()).flatten() {
         Some("svg") => {

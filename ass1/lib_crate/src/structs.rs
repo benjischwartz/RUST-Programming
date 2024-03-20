@@ -1,4 +1,4 @@
-use unsvg::{Color, get_end_coordinates, COLORS};
+use unsvg::{Color, COLORS};
 
 #[derive(Debug)]
 pub enum Procedure {
@@ -55,22 +55,6 @@ impl Cursor {
 
     pub fn isdown(&self) -> bool {
         return self.pen_status == PenStatus::PENDOWN
-    }
-
-    pub fn moveforward(&mut self, value: f32) {
-       let temp = get_end_coordinates(self.x_coord, self.y_coord, self.direction, value);
-    }
-
-    pub fn moveback(&mut self, value: f32) {
-        self.y_coord += value;
-    }
-
-    pub fn moveleft(&mut self, value: f32) {
-        self.x_coord -= value;
-    }
-
-    pub fn moveright(&mut self, value: f32) {
-        self.x_coord += value;
     }
 
     pub fn color_as_f32(&self) -> f32 {

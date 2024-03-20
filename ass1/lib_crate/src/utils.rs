@@ -1,9 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::Error;
-use std::fs::File;
-use std::hash::Hash;
-use std::io::BufReader;
-use unsvg::{Image, Color, get_end_coordinates, COLORS};
+use unsvg::{Image, get_end_coordinates, COLORS};
 use crate::structs::{Cursor, Procedure};
 
 fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Procedure> {
@@ -239,4 +235,64 @@ fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32> {
         "COLOR" => Some(cursor.color_as_f32()),
         _ => None,
     }
+}
+
+// Assumes line in form "<value1> <value2>"
+// values can be raw values, queries, or variables
+pub fn check_equality(line: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<bool, String>
+{
+    // Get first arg
+    let tokens: Vec<& str> = line.split_whitespace().collect();
+    let a: f32;
+    let b: f32;
+    if tokens[0].starts_with('"') {
+        a = match tokens[0].trim_matches('"').parse::<f32>(){
+            Ok(value) => value,
+            Err(_) => return Err("Failed to parse first arg!".to_string()),
+        };
+    } else if tokens[0].starts_with(':') {
+        let name = tokens[0].trim_matches(':').to_string();
+        a =  match variables.get(&name) {
+            Some(value) => *value,
+            None => return Err("No matching variable found".to_string()),
+        };
+    } else {
+        a = match get_query(tokens[0], cursor) {
+            Some(value) => value,
+            None => return Err("Expected arg!".to_string())
+        };
+    }
+    if tokens[1].starts_with('"') {
+        b = match tokens[1].trim_matches('"').parse::<f32>(){
+            Ok(value) => value,
+            Err(_) => return Err("Failed to parse first arg!".to_string()),
+        };
+    } else if tokens[1].starts_with(':') {
+        let name = tokens[1].trim_matches(':').to_string();
+        b =  match variables.get(&name) {
+            Some(value) => *value,
+            None => return Err("No matching variable found".to_string()),
+        };
+    } else {
+        b = match get_query(tokens[1], cursor) {
+            Some(value) => value,
+            None => return Err("Expected arg!".to_string())
+        };
+    }
+    Ok(a == b)
+}
+
+pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> usize
+{
+    let mut condition_count = 1;
+    while condition_count != 0 {
+        if lines[line_number].ends_with("[") {
+            condition_count = condition_count + 1
+        }
+        else if lines[line_number].starts_with("]") {
+            condition_count = condition_count - 1;
+        }
+        line_number = line_number + 1;
+    }
+    line_number
 }
