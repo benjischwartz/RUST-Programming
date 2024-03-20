@@ -45,13 +45,18 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                 if let Some(value) = iter.next() {
                     // VALUE CASE
                     if value.starts_with('"') {
-                        if let Ok(value) = value.trim_matches('"').parse::<f32>() {
-                            let procedure = parse_procedure(token, None, value).expect("Should be a valid command");
-                            execute_procedure(image, procedure, cursor, variables);
-                        }
-                        else {
-                            return Err("Couldn't parse arg!".to_string());
-                        }
+                        let trimmed_token = value.trim_matches('"');
+                        res = match get_bool_as_f32(trimmed_token) {
+                            Some(res) => res,
+                            None => {
+                                match trimmed_token.parse::<f32>(){
+                                    Ok(res) => res,
+                                    Err(_) => return Err("Couldn't parse value!".to_string()),
+                                }
+                            }
+                        };
+                        let procedure = parse_procedure(token, None, value).expect("Should be a valid command");
+                        execute_procedure(image, procedure, cursor, variables);
                     }
                     // VARIABLE CASE
                     else if value.starts_with(':') {
@@ -63,11 +68,10 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                 execute_procedure(image, procedure, cursor, variables);
                             },
                             None => {
-                                return Err("No matching variable found".to_string());
+                                return Err("No matching variable found!".to_string());
                             }
                         }
                     }
-                    // TODO: Check if need to add Query case
                     else {
                         match get_query(value, cursor) {
                             Some(value) => {
@@ -79,7 +83,6 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                         }
                     }
                 }
-                else { return Err("Not enough args!".to_string())};
             },
             "MAKE" | "ADDASSIGN" => {
                 if let Some(name) = iter.next() {
@@ -87,24 +90,19 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                         if let Ok(name) = name.trim_matches('"').parse::<String>() {
                             if let Some(value) = iter.next() {
                                 if value.starts_with('"') {
-                                    if let Ok(value) = value.trim_matches('"').parse::<f32>() {
-                                        let procedure = parse_procedure(token, Some(name), value)
-                                            .expect("Should be a valid command");
-                                        execute_procedure(image, procedure, cursor, variables);
-                                    }
-                                    else if value.trim_matches('"') == "TRUE" {
-                                        let procedure = parse_procedure(token, Some(name), 1.0)
-                                            .expect("Should be a valid command");
-                                        execute_procedure(image, procedure, cursor, variables);
-                                    }
-                                    else if value.trim_matches('"') == "FALSE" {
-                                        let procedure = parse_procedure(token, Some(name), 0.0)
-                                            .expect("Should be a valid command");
-                                        execute_procedure(image, procedure, cursor, variables);
-                                    }
-                                    else {
-                                        return Err("Couldn't parse second arg!".to_string());
-                                    }
+                                    let trimmed_token = value.trim_matches('"');
+                                    res = match get_bool_as_f32(trimmed_token) {
+                                        Some(res) => res,
+                                        None => {
+                                            match trimmed_token.parse::<f32>(){
+                                                Ok(res) => res,
+                                                Err(_) => return Err("Couldn't parse second arg!".to_string()),
+                                            }
+                                        }
+                                    };
+                                    let procedure = parse_procedure(token, Some(name), res)
+                                        .expect("Should be a valid command");
+                                    execute_procedure(image, procedure, cursor, variables);
                                 }
                                 else if value.starts_with(':') {
                                     let variable = value.trim_matches(':').to_string();
