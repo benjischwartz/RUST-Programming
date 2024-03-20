@@ -80,7 +80,9 @@ fn main() -> Result<(), i32>
                     if result {
                         println!("CONDITION IS TRUE");
                         // Add return line number
-                        return_map.insert(utils::jump_to_matching_bracket(line_number, &lines) - 1, line_number);
+                        let return_line = utils::jump_to_matching_bracket(line_number, &lines) - 1;
+                        println!("adding return line {return_line} for statement on line {line_number}");
+                        return_map.insert(utils::jump_to_matching_bracket(line_number + 1, &lines) - 1, line_number);
                         line_number = line_number + 1;
                         continue;
                     }
