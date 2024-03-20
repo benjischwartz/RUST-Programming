@@ -88,13 +88,13 @@ fn main() -> Result<(), i32>
                     if result {
                         println!("CONDITION IS TRUE");
                         // Add return line number
-                        let return_line = match utils::jump_to_matching_bracket(line_number, &lines) {
+                        let return_line = match utils::jump_to_matching_bracket(line_number + 1, &lines) {
                             Ok(line) => line - 1,
                             Err(err) => {
                                 eprintln!("{err}");
                                 return Err(1)
                             }
-                        }; - 1;
+                        };
                         println!("adding return line {return_line} for statement on line {line_number}");
                         return_map.insert(utils::jump_to_matching_bracket(line_number + 1, &lines).unwrap() - 1, line_number);
                         line_number = line_number + 1;

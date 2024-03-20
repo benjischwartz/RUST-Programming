@@ -316,6 +316,10 @@ pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> 
         else if line.starts_with("]") {
             condition_count = condition_count - 1;
         }
+        println!("Condition count: {condition_count}");
+        println!("line_number: {line_number}");
+        println!("line: {line}");
+
         line_number = line_number + 1;
     }
     if condition_count > 0 {
