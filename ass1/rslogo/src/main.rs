@@ -35,6 +35,7 @@ fn main() -> Result<(), i32>
     let mut image = Image::new(width, height);
     let mut cursor = Cursor::new((width / 2) as f32, (height / 2) as f32);
     let mut variables: HashMap<String, f32> = HashMap::new();
+    let mut return_map: HashMap<usize, usize> = HashMap::new();
 
     // Work line by line, parsing then executing program
     let file = match File::open(&file_path) {
@@ -47,7 +48,7 @@ fn main() -> Result<(), i32>
 
     let reader = BufReader::new(file);
 
-    let mut lines = reader.lines().map(|l| l.unwrap()).collect::<Vec<_>>();
+    let lines = reader.lines().map(|l| l.unwrap()).collect::<Vec<_>>();
     let mut line_number = 0;
     while line_number < lines.len()
     {
@@ -72,19 +73,42 @@ fn main() -> Result<(), i32>
                     return Err(1)
                 }
             }
-            todo!()
         }
-        else if line.starts_with("WHILE") {
-            todo!()
+        else if line.starts_with("WHILE EQ") {
+            match utils::check_equality(line.strip_prefix("WHILE EQ").unwrap(), &mut cursor, &mut variables) {
+                Ok(result) => {
+                    if result {
+                        println!("CONDITION IS TRUE");
+                        // Add return line number
+                        return_map.insert(utils::jump_to_matching_bracket(line_number, &lines) - 1, line_number);
+                        line_number = line_number + 1;
+                        continue;
+                    }
+                    else {
+                        println!("CONDITION IS FALSE");
+                        line_number = utils::jump_to_matching_bracket(line_number + 1, &lines);
+                        continue
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{err}");
+                    return Err(1)
+                }
+            }
+        }
+        else if line.starts_with(']') {
+            // Check if this is the end of a while loop
+            if return_map.contains_key(&line_number) {
+                line_number = *return_map.get(&line_number).expect("Key exists");
+                continue;
+            }
         }
         else {
-            if !line.starts_with(']') {
-                match utils::handle_line(line, &mut image, &mut cursor, &mut variables) {
-                    Ok(_) => {},
-                    Err(err) => {
-                        eprintln!("{err}");
-                        return Err(1)
-                    }
+            match utils::handle_line(line, &mut image, &mut cursor, &mut variables) {
+                Ok(_) => {},
+                Err(err) => {
+                    eprintln!("{err}");
+                    return Err(1)
                 }
             }
             line_number = line_number + 1;
