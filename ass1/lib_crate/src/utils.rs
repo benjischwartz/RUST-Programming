@@ -46,7 +46,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                     // VALUE CASE
                     if value.starts_with('"') {
                         let trimmed_token = value.trim_matches('"');
-                        res = match get_bool_as_f32(trimmed_token) {
+                        let res = match get_bool_as_f32(trimmed_token) {
                             Some(res) => res,
                             None => {
                                 match trimmed_token.parse::<f32>(){
@@ -55,7 +55,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                 }
                             }
                         };
-                        let procedure = parse_procedure(token, None, value).expect("Should be a valid command");
+                        let procedure = parse_procedure(token, None, res).expect("Should be a valid command");
                         execute_procedure(image, procedure, cursor, variables);
                     }
                     // VARIABLE CASE
@@ -91,7 +91,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                             if let Some(value) = iter.next() {
                                 if value.starts_with('"') {
                                     let trimmed_token = value.trim_matches('"');
-                                    res = match get_bool_as_f32(trimmed_token) {
+                                    let res = match get_bool_as_f32(trimmed_token) {
                                         Some(res) => res,
                                         None => {
                                             match trimmed_token.parse::<f32>(){
