@@ -285,7 +285,7 @@ pub fn check_equality(line: &str, cursor: &mut Cursor, variables: &mut HashMap<S
 pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> usize
 {
     let mut condition_count = 1;
-    while condition_count != 0 {
+    while condition_count != 0 && line_number < lines.len() {
         if lines[line_number].ends_with("[") {
             condition_count = condition_count + 1
         }
