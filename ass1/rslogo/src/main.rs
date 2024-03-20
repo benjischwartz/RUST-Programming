@@ -64,13 +64,15 @@ fn main() -> Result<(), i32>
                     }
                     else {
                         println!("CONDITION IS FALSE");
-                        let line_number = match utils::jump_to_matching_bracket(line_number + 1, &lines) {
+                        println!("Start line: {line_number}");
+                        line_number = match utils::jump_to_matching_bracket(line_number + 1, &lines) {
                             Ok(line_number) => line_number,
                             Err(err) => {
                                 eprintln!("{err}");
                                 return Err(1)
                             }
                         };
+                        println!("After jumping line: {line_number}");
                         continue
                     }
                 }
@@ -87,12 +89,12 @@ fn main() -> Result<(), i32>
                         println!("CONDITION IS TRUE");
                         // Add return line number
                         let return_line = match utils::jump_to_matching_bracket(line_number, &lines) {
-                            Ok(return_line) => return_line - 1,
+                            Ok(line) => line - 1,
                             Err(err) => {
                                 eprintln!("{err}");
                                 return Err(1)
                             }
-                        };
+                        }; - 1;
                         println!("adding return line {return_line} for statement on line {line_number}");
                         return_map.insert(utils::jump_to_matching_bracket(line_number + 1, &lines).unwrap() - 1, line_number);
                         line_number = line_number + 1;
@@ -101,7 +103,7 @@ fn main() -> Result<(), i32>
                     else {
                         println!("CONDITION IS FALSE");
                         line_number = match utils::jump_to_matching_bracket(line_number + 1, &lines) {
-                            Ok(line_number) => line_number,
+                            Ok(line) => line,
                             Err(err) => {
                                 eprintln!("{err}");
                                 return Err(1)
