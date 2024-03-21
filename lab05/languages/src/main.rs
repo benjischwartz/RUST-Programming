@@ -6,6 +6,10 @@ trait Greeting {
     fn greet(&self);
 }
 
+trait From {
+    fn from(&self) -> Box<dyn Greeting>;
+}
+
 impl Greeting for English {
     fn greet(&self) {
         println!("Hello!");
@@ -30,8 +34,19 @@ struct Person {
     greetings: Vec<Box<dyn Greeting>>,
 }
 
-// TODO (1): Add your impl From block below, before main!
-
+impl std::convert::From<&str> for Box<dyn Greeting> {
+    fn from(l: &str) -> Self {
+        if l.starts_with("English") {
+            Box::new(English)
+        }
+        else if l.starts_with("Spanish") {
+            Box::new(Spanish)
+        }
+        else {
+            Box::new(French)
+        }
+    }
+}
 
 // DO NOT NEED TO CHANGE MAIN
 fn main() {
@@ -53,6 +68,8 @@ fn main() {
 }
 
 fn speak_all_greetings(person: &Person) {
-    println!("{} says:", person.name);
-    //TODO (2): iterate over the greetings and call greet() on each one
+    println!("{} says: ", person.name);
+    for greeting in &person.greetings {
+        greeting.greet();
+    }
 }
