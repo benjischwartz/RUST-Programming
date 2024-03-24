@@ -54,6 +54,9 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                         Err(err) => return Err(err),
                     };
                 }
+                else {
+                    return Err("Not enough args!".to_string());
+                }
             },
             "MAKE" | "ADDASSIGN" => {
                 if let Some(name) = iter.next() {
