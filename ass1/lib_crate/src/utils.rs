@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use unsvg::{Image, get_end_coordinates, COLORS};
 use crate::structs::{Cursor, Procedure, Operator};
 
-fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Procedure> {
+fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Procedure>
+{
     match token {
         "FORWARD" => Some(Procedure::FORWARD(value)),
         "BACK" => Some(Procedure::BACK(value)),
@@ -23,7 +24,8 @@ fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Proc
     }
 }
 
-pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<usize, String> {
+pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<usize, String>
+{
     if line.starts_with("//") {
         println!("Skipping... comment");
         return Ok(0);
@@ -42,99 +44,32 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
             },
             "FORWARD" | "BACK" | "LEFT" | "RIGHT" | "SETPENCOLOR" |
             "TURN" | "SETHEADING" | "SETX" | "SETY" => {
-                if let Some(value) = iter.next() {
-                    // VALUE CASE
-                    if value.starts_with('"') {
-                        let trimmed_token = value.trim_matches('"');
-                        let res = match get_bool_as_f32(trimmed_token) {
-                            Some(res) => res,
-                            None => {
-                                match trimmed_token.parse::<f32>(){
-                                    Ok(res) => res,
-                                    Err(_) => return Err("Couldn't parse value!".to_string()),
-                                }
-                            }
-                        };
-                        let procedure = parse_procedure(token, None, res).expect("Should be a valid command");
-                        execute_procedure(image, procedure, cursor, variables);
-                    }
-                    // VARIABLE CASE
-                    else if value.starts_with(':') {
-                        let name = value.trim_matches(':').to_string();
-                        match variables.get(&name) {
-                            Some(value) => {
-                                let procedure = parse_procedure(token, None, *value)
-                                    .expect("Should be a valid command");
-                                execute_procedure(image, procedure, cursor, variables);
-                            },
-                            None => {
-                                return Err("No matching variable found!".to_string());
-                            }
-                        }
-                    }
-                    else {
-                        match get_query(value, cursor) {
-                            Some(value) => {
-                                let procedure = parse_procedure(token, None, value)
-                                    .expect("Should be a valid command");
-                                execute_procedure(image, procedure, cursor, variables);
-                            },
-                            None => {return Err("Expected arg!".to_string()); }
-                        }
-                    }
-                }
-                else {
-                    return Err("Expected arg!".to_string());
+                if let Some(maybe_value) = iter.next() {
+                    let value = match get_value(maybe_value, cursor, variables) {
+                        Ok(value) => {
+                            let procedure = parse_procedure(token, None, value)
+                                .expect("Should be a valid command");
+                            execute_procedure(image, procedure, cursor, variables);
+                        },
+                        Err(err) => return Err(err),
+                    };
                 }
             },
             "MAKE" | "ADDASSIGN" => {
                 if let Some(name) = iter.next() {
                     if name.starts_with('"') {
                         if let Ok(name) = name.trim_matches('"').parse::<String>() {
-                            if let Some(value) = iter.next() {
-                                if value.starts_with('"') {
-                                    let trimmed_token = value.trim_matches('"');
-                                    let res = match get_bool_as_f32(trimmed_token) {
-                                        Some(res) => res,
-                                        None => {
-                                            match trimmed_token.parse::<f32>(){
-                                                Ok(res) => res,
-                                                Err(_) => return Err("Couldn't parse second arg!".to_string()),
-                                            }
-                                        }
-                                    };
-                                    let procedure = parse_procedure(token, Some(name), res)
-                                        .expect("Should be a valid command");
-                                    execute_procedure(image, procedure, cursor, variables);
-                                }
-                                else if value.starts_with(':') {
-                                    let variable = value.trim_matches(':').to_string();
-                                    match variables.get(&variable) {
-                                        Some(value) => {
-                                            let procedure = parse_procedure(token, Some(name), *value)
-                                                .expect("Should be a valid command");
-                                            execute_procedure(image, procedure, cursor, variables);
-                                        },
-                                        None => {
-                                            return Err("No matching variable found".to_string());
-                                        }
-                                    }
-                                }
-                                else {
-                                    match get_query(value, cursor) {
-                                        Some(value) => {
-                                            let procedure = parse_procedure(token, Some(name), value)
-                                                .expect("Should be a valid command");
-                                            execute_procedure(image, procedure, cursor, variables);
-                                        },
-                                        None => {return Err("Expected arg!".to_string()); }
-                                    }
-                                }
+                            if let Some(maybe_value) = iter.next() {
+                                let value= match get_value(maybe_value, cursor, variables) {
+                                    Ok(value) => {
+                                        let procedure = parse_procedure(token, Some(name), value)
+                                            .expect("Should be a valid command");
+                                        execute_procedure(image, procedure, cursor, variables);
+                                    },
+                                    Err(err) => return Err(err)
+                                };
                             }
                         }
-                    }
-                    else {
-                        return Err("Couldn't parse variable name!".to_string());
                     }
                 }
                 else {
@@ -227,7 +162,8 @@ fn execute_procedure(image: &mut Image, procedure: Procedure, cursor: &mut Curso
     Ok(())
 }
 
-fn move_cursor(image: &mut Image, cursor: &mut Cursor, direction: i32, length: f32) {
+fn move_cursor(image: &mut Image, cursor: &mut Cursor, direction: i32, length: f32)
+{
     println!("In move cursor, cursor down {}", cursor.isdown());
     if cursor.isdown() {
         println!("Drawing!");
@@ -238,7 +174,8 @@ fn move_cursor(image: &mut Image, cursor: &mut Cursor, direction: i32, length: f
     cursor.y_coord = coords.1;
 }
 
-fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32> {
+fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32>
+{
     match query {
         "XCOR" => Some(cursor.x_coord),
         "YCOR" => Some(cursor.y_coord),
@@ -248,8 +185,6 @@ fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32> {
     }
 }
 
-// Assumes line in form "<value1> <value2>"
-// values can be raw values, queries, or variables
 pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<bool, String>
 {
     let tokens: Vec<& str> = line.split_whitespace().collect();
