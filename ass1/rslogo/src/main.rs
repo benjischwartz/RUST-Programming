@@ -54,8 +54,8 @@ fn main() -> Result<(), i32>
     {
         let line = lines[line_number].trim();
         println!("Processing line: {line}");
-        if line.starts_with("IF EQ") {
-            match utils::check_equality(line.strip_prefix("IF EQ").unwrap(), &mut cursor, &mut variables) {
+        if line.starts_with("IF") {
+            match utils::check_condition(line.strip_prefix("IF ").unwrap(), &mut cursor, &mut variables) {
                 Ok(result) => {
                     if result {
                         println!("CONDITION IS TRUE");
@@ -82,8 +82,8 @@ fn main() -> Result<(), i32>
                 }
             }
         }
-        else if line.starts_with("WHILE EQ") {
-            match utils::check_equality(line.strip_prefix("WHILE EQ").unwrap(), &mut cursor, &mut variables) {
+        else if line.starts_with("WHILE") {
+            match utils::check_condition(line.strip_prefix("WHILE ").unwrap(), &mut cursor, &mut variables) {
                 Ok(result) => {
                     if result {
                         println!("CONDITION IS TRUE");

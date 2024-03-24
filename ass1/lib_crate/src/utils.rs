@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use unsvg::{Image, get_end_coordinates, COLORS};
-use crate::structs::{Cursor, Procedure};
+use crate::structs::{Cursor, Procedure, Operator};
 
 fn parse_procedure(token: &str, name: Option<String>, value: f32) -> Option<Procedure> {
     match token {
@@ -250,59 +250,70 @@ fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32> {
 
 // Assumes line in form "<value1> <value2>"
 // values can be raw values, queries, or variables
-pub fn check_equality(line: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<bool, String>
+pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<bool, String>
 {
-    // Get first arg
     let tokens: Vec<& str> = line.split_whitespace().collect();
-    let a: f32;
-    let b: f32;
-    if tokens[0].starts_with('"') {
-        let trimmed_token = tokens[0].trim_matches('"');
-        a = match get_bool_as_f32(trimmed_token) {
-            Some(a) => a,
-            None => {
-                match trimmed_token.parse::<f32>(){
-                    Ok(a) => a,
-                    Err(_) => return Err("Failed to parse first arg!".to_string()),
-                }
-            }
-        }
-    } else if tokens[0].starts_with(':') {
-        let name = tokens[0].trim_matches(':').to_string();
-        a =  match variables.get(&name) {
-            Some(value) => *value,
-            None => return Err("No matching variable found".to_string()),
-        };
-    } else {
-        a = match get_query(tokens[0], cursor) {
-            Some(value) => value,
-            None => return Err("Expected arg!".to_string())
-        };
-    }
-    if tokens[1].starts_with('"') {
-        let trimmed_token = tokens[1].trim_matches('"');
-        b = match get_bool_as_f32(trimmed_token) {
-            Some(b) => b,
-            None => {
-                match trimmed_token.parse::<f32>(){
-                    Ok(b) => b,
-                    Err(_) => return Err("Failed to parse first arg!".to_string()),
-                }
-            }
-        }
-    } else if tokens[1].starts_with(':') {
-        let name = tokens[1].trim_matches(':').to_string();
-        b =  match variables.get(&name) {
-            Some(value) => *value,
-            None => return Err("No matching variable found".to_string()),
-        };
-    } else {
-        b = match get_query(tokens[1], cursor) {
-            Some(value) => value,
-            None => return Err("Expected arg!".to_string())
-        };
-    }
+    // Get operator => EQ, NE, GT, LT, AND, OR
+    let operator = match tokens[0]{
+        "EQ" => {Operator::EQ},
+        "NE" => {Operator::NE},
+        "GT" => {Operator::GT},
+        "LT" => {Operator::LT},
+        "AND" => {Operator::AND},
+        "OR" => {Operator::OR},
+        _ => { return Err("Invalid operator!".to_string())},
+    };
+
+    // Get first arg
+    let a = match get_value(tokens[1], cursor, variables) {
+        Ok(value) => value,
+        Err(err) => return Err(err),
+    };
+
+    // Get second arg
+    let b = match get_value(tokens[2], cursor, variables) {
+        Ok(value) => value,
+        Err(err) => return Err(err),
+    };
+
     Ok(a == b)
+}
+
+pub fn get_value(token: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<f32, String>
+{
+    // VALUE CASE
+    if token.starts_with('"')
+    {
+        let trimmed_token = token.trim_matches('"');
+        match get_bool_as_f32(trimmed_token) {
+            Some(bool) => Ok(bool),
+            None => {
+                match trimmed_token.parse::<f32>(){
+                    Ok(value) => Ok(value),
+                    Err(_) => return Err("Invalid value!".to_string()),
+                }
+            }
+        }
+    }
+
+    // VARIABLE CASE
+    else if token.starts_with(':')
+    {
+        let name = token.trim_matches(':').to_string();
+        match variables.get(&name) {
+            Some(value) => Ok(*value),
+            None => return Err("No matching variable found".to_string()),
+        }
+    }
+
+    // QUERY CASE
+    else
+    {
+        match get_query(token, cursor) {
+            Some(value) => Ok(value),
+            None => return Err("Value not found!".to_string())
+        }
+    }
 }
 
 pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> Result<usize, String>

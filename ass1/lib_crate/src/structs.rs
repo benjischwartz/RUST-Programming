@@ -21,6 +21,15 @@ pub enum Procedure {
     ADDASSIGN(String, f32),
 }
 
+pub enum Operator {
+    EQ,
+    NE,
+    GT,
+    LT,
+    AND,
+    OR,
+}
+
 pub struct Token {
     procedure: Option<Procedure>,
     variable: Option<String>,
