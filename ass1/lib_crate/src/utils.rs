@@ -432,7 +432,7 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
         }
         _ => {
             let (res, advance_by) = get_value(tokens[position], &tokens, cursor, variables).unwrap();
-            split = position + advance_by + 1;
+            split = position + advance_by;
             res
         }
     };
