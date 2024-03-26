@@ -106,7 +106,10 @@ pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<
     println!("Checking condition!");
 
     // Remove trailing {
-    tokens.pop();
+    match tokens.pop().unwrap() {
+        "}" => {},
+        last => {tokens.push(last)},
+    };
 
     let operator = parse_operator(tokens[0]).unwrap();
     let operands = get_operands(&tokens, 1usize, cursor, variables).unwrap();
@@ -432,7 +435,7 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
         }
         _ => {
             let (res, advance_by) = get_value(tokens[position], &tokens, cursor, variables).unwrap();
-            split = position + advance_by;
+            split = position + advance_by + 1;
             res
         }
     };
