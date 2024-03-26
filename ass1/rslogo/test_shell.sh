@@ -1,7 +1,7 @@
 #!/bin/sh
 
 count=0
-num_files=40
+num_files=50
 
 for file in logo_examples/*; do
     if [ -f "$file" ]; then
