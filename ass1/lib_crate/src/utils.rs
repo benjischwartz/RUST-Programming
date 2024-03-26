@@ -53,13 +53,15 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                     println!("second strip: {stripped_line} ");
                                     stripped_line = stripped_line.strip_prefix(name).unwrap();
                                     println!("third strip: {stripped_line} ");
-                                    let res = match check_condition(stripped_line, cursor, variables).unwrap() {
-                                        true => {
+                                    match check_condition(stripped_line, cursor, variables).unwrap() {
+                                        (true, adv) => {
+                                            advance_by = adv;
                                             let procedure = parse_procedure(token, Some(stripped_name), 1.0)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
                                         }
-                                        false => {
+                                        (false, adv) => {
+                                            advance_by = adv;
                                             let procedure = parse_procedure(token, Some(stripped_name), 0.0)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
@@ -99,7 +101,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
     Ok(0)
 }
 
-pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<bool, String>
+pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<String, f32>) -> Result<(bool, usize), String>
 {
     let mut tokens: Vec<& str> = line.split_whitespace().collect();
 
@@ -107,17 +109,29 @@ pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<
 
     // Remove trailing {
     match tokens.pop().unwrap() {
-        "}" => {},
+        "]" => {},
         last => {tokens.push(last)},
     };
 
-    let operator = parse_operator(tokens[0]).unwrap();
-    let operands = get_operands(&tokens, 1usize, cursor, variables).unwrap();
-    match compare(operator, (operands.0, operands.1)).unwrap() {
-        0.0 => Ok(false),
-        1.0 => Ok(true),
-        _ => return Err("Failed to evalatue condition!".to_string())
+    match tokens[0] {
+        "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
+            let operator = parse_operator(tokens[0]).unwrap();
+            let operands = get_operands(&tokens, 1usize, cursor, variables).unwrap();
+            match compare(operator, (operands.0, operands.1)).unwrap() {
+                0.0 => Ok((false, operands.2)),
+                1.0 => Ok((true, operands.2)),
+                _ => return Err("Failed to evalatue condition!".to_string())
+            }
+        },
+        _ => {
+            match get_value(tokens[0], &tokens, cursor, variables) {
+                Ok((1.0, adv))=> Ok((true, adv)),
+                Ok((0.0, adv))=> Ok((false, adv)),
+                _ => return Err("Not a valid boolean!".to_string())
+            }
+        },
     }
+
 }
 
 pub fn jump_to_matching_bracket(mut line_number: usize, lines: &Vec<String>) -> Result<usize, String>
