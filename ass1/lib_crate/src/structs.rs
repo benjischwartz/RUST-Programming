@@ -21,6 +21,7 @@ pub enum Procedure {
     ADDASSIGN(String, f32),
 }
 
+#[derive(Debug)]
 pub enum Operator {
     EQ,
     NE,
