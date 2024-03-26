@@ -56,7 +56,7 @@ fn main() -> Result<(), i32>
         println!("Processing line: {line}");
         if line.starts_with("IF") {
             match utils::check_condition(line.strip_prefix("IF ").unwrap(), &mut cursor, &mut variables) {
-                Ok(result) => {
+                Ok((result, adv)) => {
                     if result {
                         println!("CONDITION IS TRUE");
                         line_number = line_number + 1;
@@ -84,7 +84,7 @@ fn main() -> Result<(), i32>
         }
         else if line.starts_with("WHILE") {
             match utils::check_condition(line.strip_prefix("WHILE ").unwrap(), &mut cursor, &mut variables) {
-                Ok(result) => {
+                Ok((result, adv)) => {
                     if result {
                         println!("CONDITION IS TRUE");
                         // Add return line number
