@@ -43,17 +43,40 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
             "MAKE" | "ADDASSIGN" => {
                 if let Some(name) = iter.next() {
                     if name.starts_with('"') {
-                        if let Ok(name) = name.trim_matches('"').parse::<String>() {
-                            if let Some(maybe_value) = iter.next() {
-                                let value = match get_value(maybe_value, &tokens, cursor, variables) {
-                                    Ok((value, adv)) => {
-                                        advance_by = adv;
-                                        let procedure = parse_procedure(token, Some(name), value)
-                                            .expect("Should be a valid command");
-                                        execute_procedure(image, procedure, cursor, variables);
-                                    },
-                                    Err(err) => return Err(err),
-                                };
+                        if let Ok(stripped_name) = name.trim_matches('"').parse::<String>() {
+                            match *(iter.next().unwrap()) {
+                                "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
+                                    println!("Stripping {token}");
+                                    let mut stripped_line = line.clone().strip_prefix(token).unwrap();
+                                    println!("first strip: {stripped_line} ");
+                                    stripped_line = stripped_line.strip_prefix(" ").unwrap();
+                                    println!("second strip: {stripped_line} ");
+                                    stripped_line = stripped_line.strip_prefix(name).unwrap();
+                                    println!("third strip: {stripped_line} ");
+                                    let res = match check_condition(stripped_line, cursor, variables).unwrap() {
+                                        true => {
+                                            let procedure = parse_procedure(token, Some(stripped_name), 1.0)
+                                                .expect("Should be a valid command");
+                                            execute_procedure(image, procedure, cursor, variables);
+                                        }
+                                        false => {
+                                            let procedure = parse_procedure(token, Some(stripped_name), 0.0)
+                                                .expect("Should be a valid command");
+                                            execute_procedure(image, procedure, cursor, variables);
+                                        }
+                                    };
+                                },
+                                maybe_value => {
+                                    match get_value(maybe_value, &tokens, cursor, variables) {
+                                        Ok((value, adv)) => {
+                                            advance_by = adv;
+                                            let procedure = parse_procedure(token, Some(stripped_name), value)
+                                                .expect("Should be a valid command");
+                                            execute_procedure(image, procedure, cursor, variables);
+                                        },
+                                        Err(err) => return Err(err),
+                                    }
+                                }
                             }
                         }
                     }
