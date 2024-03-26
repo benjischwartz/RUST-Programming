@@ -48,7 +48,7 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                                 let value = match get_value(maybe_value, &tokens, cursor, variables) {
                                     Ok((value, adv)) => {
                                         advance_by = adv;
-                                        let procedure = parse_procedure(token, None, value)
+                                        let procedure = parse_procedure(token, Some(name), value)
                                             .expect("Should be a valid command");
                                         execute_procedure(image, procedure, cursor, variables);
                                     },
