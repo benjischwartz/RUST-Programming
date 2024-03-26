@@ -46,25 +46,26 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                         if let Ok(stripped_name) = name.trim_matches('"').parse::<String>() {
                             match *(iter.next().unwrap()) {
                                 "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
-                                    println!("Stripping {token}");
+
+                                    // STRIP OF MAKE/ADDASIGN COMPARISON
                                     let mut stripped_line = line.clone().strip_prefix(token).unwrap();
-                                    println!("first strip: {stripped_line} ");
                                     stripped_line = stripped_line.strip_prefix(" ").unwrap();
-                                    println!("second strip: {stripped_line} ");
                                     stripped_line = stripped_line.strip_prefix(name).unwrap();
-                                    println!("third strip: {stripped_line} ");
+
                                     match check_condition(stripped_line, cursor, variables).unwrap() {
                                         (true, adv) => {
                                             advance_by = adv;
                                             let procedure = parse_procedure(token, Some(stripped_name), 1.0)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
+                                            break;
                                         }
                                         (false, adv) => {
                                             advance_by = adv;
                                             let procedure = parse_procedure(token, Some(stripped_name), 0.0)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
+                                            break;
                                         }
                                     };
                                 },
@@ -336,8 +337,6 @@ fn get_query(query: &str, cursor: &mut Cursor) -> Option<f32>
 
 fn get_bool_as_f32(value: &str) -> Option<f32>
 {
-    println!("in get bool function");
-    println!("value: {value}");
     if value == "TRUE" {
         Some(1.0)
     }
@@ -370,7 +369,7 @@ fn process_prefix(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, var
 
     let mut stack = Vec::new();
     let end_pos = cur + num_ops;
-    let advance_by = 2 * num_ops;
+    let advance_by = 2 * num_ops + 1;
     // PUSH VALUES ONTO STACK IN REVERSE
     for i in 0..(num_ops + 1) {
         let value = get_value(tokens[end_pos - i], &tokens, cursor, variables).unwrap().0;
@@ -441,15 +440,22 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
     let mut split: usize;
     let end_pos: usize;
 
+    println!("Position is {position}");
     let operand_1 = match tokens[position] {
         "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
             let res = get_operands(&tokens, position + 1, cursor, variables).unwrap();
             split = res.2;
+            let first = res.0;
+            let second = res.1;
+            let comparison = tokens[position];
+            println!("Comparison is {comparison}");
+            println!("first operand {first}");
+            println!("second operand {second}");
             compare(parse_operator(tokens[position]).unwrap(), (res.0, res.1)).unwrap()
         }
         "+" | "-" | "*" | "/" => {
             let res = process_prefix(&tokens, position, cursor, variables).unwrap();
-            split = position + res.1 + 1;
+            split = position + res.1;
             println!("split idx is: {split}");
             println!("tokens are: {:?}", tokens);
             res.0
@@ -460,16 +466,20 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
             res
         }
     };
+    println!("Operand 1 is {operand_1}");
+    println!("Split is {split}");
 
     let operand_2 = match tokens[split] {
         "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
+            let tok = tokens[split];
+            println!("Processing token {tok}");
             let res = get_operands(&tokens, split + 1, cursor, variables).unwrap();
             end_pos = res.2;
             compare(parse_operator(tokens[split]).unwrap(), (res.0, res.1)).unwrap()
         }
         "+" | "-" | "*" | "/" => {
             let res = process_prefix(&tokens, split, cursor, variables).unwrap();
-            end_pos = res.1;
+            end_pos = position + res.1 + 1;
             res.0
         }
         _ => {
@@ -478,5 +488,7 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
             res
         }
     };
+    println!("Operand 2 is {operand_2}");
+    println!("end_pos is {end_pos}");
     Ok((operand_1, operand_2, end_pos))
 }
