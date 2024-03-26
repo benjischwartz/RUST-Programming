@@ -381,7 +381,9 @@ fn process_prefix(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, var
     // APPLY OPERATORS TO STACK VALUES
     for i in 1..=num_ops {
         let op1 = stack.pop().unwrap();
+        println!("op1 is {op1}");
         let op2 = stack.pop().unwrap();
+        println!("op2 is {op2}");
         let token = tokens[cur - i];
         println!("token is: {token}");
         let res = match tokens[cur - i] {
@@ -399,7 +401,10 @@ fn process_prefix(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, var
 
     if stack.len() > 1 { return Err("Invalid prefix expression!".to_string()) }
 
-    Ok((stack.pop().unwrap(), advance_by))
+    let res = stack.pop().unwrap();
+    println!("Result of infix: {res}");
+
+    Ok((res, advance_by))
 }
 
 fn compare(operator: Operator, operands: (f32, f32)) -> Result<f32, String>
@@ -444,7 +449,9 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
         }
         "+" | "-" | "*" | "/" => {
             let res = process_prefix(&tokens, position, cursor, variables).unwrap();
-            split = res.1;
+            split = position + res.1 + 1;
+            println!("split idx is: {split}");
+            println!("tokens are: {:?}", tokens);
             res.0
         }
         _ => {
