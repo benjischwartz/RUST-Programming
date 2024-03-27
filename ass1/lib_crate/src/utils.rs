@@ -44,29 +44,31 @@ pub fn handle_line(line: &str, image: &mut Image, cursor: &mut Cursor, variables
                 if let Some(name) = iter.next() {
                     if name.starts_with('"') {
                         if let Ok(stripped_name) = name.trim_matches('"').parse::<String>() {
-                            match *(iter.next().unwrap()) {
+                            // MATH PARSING
+                            match *(iter.next().expect("Argument expected!")) {
                                 "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
 
                                     // STRIP OF MAKE/ADDASIGN COMPARISON
-                                    let mut stripped_line = line.clone().strip_prefix(token).unwrap();
-                                    stripped_line = stripped_line.strip_prefix(" ").unwrap();
-                                    stripped_line = stripped_line.strip_prefix(name).unwrap();
+                                    let mut stripped_line = line.clone().strip_prefix(token).expect("");
+                                    stripped_line = stripped_line.strip_prefix(" ").expect("");
+                                    stripped_line = stripped_line.strip_prefix(name).expect("");
 
-                                    match check_condition(stripped_line, cursor, variables).unwrap() {
-                                        (true, adv) => {
+                                    match check_condition(stripped_line, cursor, variables) {
+                                        Ok((true, adv)) => {
                                             advance_by = adv;
                                             let procedure = parse_procedure(token, Some(stripped_name), 1.0)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
                                             break;
                                         }
-                                        (false, adv) => {
+                                        Ok((false, adv)) => {
                                             advance_by = adv;
                                             let procedure = parse_procedure(token, Some(stripped_name), 0.0)
                                                 .expect("Should be a valid command");
                                             execute_procedure(image, procedure, cursor, variables);
                                             break;
                                         }
+                                        Err(err) => return Err(err)
                                     };
                                 },
                                 maybe_value => {
@@ -109,9 +111,10 @@ pub fn check_condition(line: &str, cursor: &mut Cursor, variables: &mut HashMap<
     println!("Checking condition!");
 
     // Remove trailing {
-    match tokens.pop().unwrap() {
-        "]" => {},
-        last => {tokens.push(last)},
+    match tokens.pop() {
+        Some("]") => {},
+        Some(last) => tokens.push(last),
+        None => {},
     };
 
     match tokens[0] {
@@ -310,8 +313,12 @@ fn get_value(token: &str, tokens: &Vec<&str>, cursor: &mut Cursor, variables: &m
     {
         match token {
             "+" | "-" | "*" | "/" => {
-                let position = tokens.iter().position(|&x| x == token).unwrap();
-                let res = process_prefix(&tokens, position, cursor, variables).unwrap();
+                let position = tokens.iter().position(|&x| x == token)
+                    .expect("This should work");
+                let res = match process_prefix(&tokens, position, cursor, variables) {
+                    Ok(res) => res,
+                    Err(err) => return Err(err),
+                };
                 Ok((res.0, res.1))
             }
             _ => {
@@ -372,19 +379,19 @@ fn process_prefix(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, var
     let advance_by = 2 * num_ops + 1;
     // PUSH VALUES ONTO STACK IN REVERSE
     for i in 0..(num_ops + 1) {
-        let value = get_value(tokens[end_pos - i], &tokens, cursor, variables).unwrap().0;
+        let value = match get_value(tokens[end_pos - i], &tokens, cursor, variables) {
+            Ok(value) => value.0,
+            Err(err) => return Err(err),
+        };
         stack.push(value);
         println!("pushing {:?} to stack", value)
     }
 
     // APPLY OPERATORS TO STACK VALUES
     for i in 1..=num_ops {
-        let op1 = stack.pop().unwrap();
-        println!("op1 is {op1}");
-        let op2 = stack.pop().unwrap();
-        println!("op2 is {op2}");
+        let op1 = stack.pop().expect("Stack shouldn't be empty");
+        let op2 = stack.pop().expect("Stack shouldn't be empty");
         let token = tokens[cur - i];
-        println!("token is: {token}");
         let res = match tokens[cur - i] {
             "+" => op1 + op2,
             "-" => op1 - op2,
@@ -400,8 +407,7 @@ fn process_prefix(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, var
 
     if stack.len() > 1 { return Err("Invalid prefix expression!".to_string()) }
 
-    let res = stack.pop().unwrap();
-    println!("Result of infix: {res}");
+    let res = stack.pop().expect("Stack shouldn't be empty");
 
     Ok((res, advance_by))
 }
@@ -443,7 +449,10 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
     println!("Position is {position}");
     let operand_1 = match tokens[position] {
         "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
-            let res = get_operands(&tokens, position + 1, cursor, variables).unwrap();
+            let res = match get_operands(&tokens, position + 1, cursor, variables) {
+                Ok(res) => res,
+                Err(_) => return Err("Failed to get operands!".to_string()),
+            };
             split = res.2;
             let first = res.0;
             let second = res.1;
@@ -451,20 +460,30 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
             println!("Comparison is {comparison}");
             println!("first operand {first}");
             println!("second operand {second}");
-            compare(parse_operator(tokens[position]).unwrap(), (res.0, res.1)).unwrap()
-        }
+            match compare(parse_operator(tokens[position]).expect("Operator should be valid"),
+        (res.0, res.1)) {
+                Ok(res) => res,
+                Err(err) => return Err(err)
+            }
+        },
         "+" | "-" | "*" | "/" => {
-            let res = process_prefix(&tokens, position, cursor, variables).unwrap();
+            let res = match process_prefix(&tokens, position, cursor, variables) {
+                Ok(res)=> res,
+                Err(err) => return Err(err),
+            };
             split = position + res.1;
             println!("split idx is: {split}");
             println!("tokens are: {:?}", tokens);
             res.0
-        }
+        },
         _ => {
-            let (res, advance_by) = get_value(tokens[position], &tokens, cursor, variables).unwrap();
+            let (res, advance_by) = match get_value(tokens[position], &tokens, cursor, variables) {
+                Ok(res)=> res,
+                Err(err) => return Err(err),
+            };
             split = position + advance_by + 1;
             res
-        }
+        },
     };
     println!("Operand 1 is {operand_1}");
     println!("Split is {split}");
@@ -473,17 +492,29 @@ fn get_operands(tokens: & Vec<&str>, position: usize, cursor: &mut Cursor, varia
         "EQ" | "NE" | "GT" | "LT" | "AND" | "OR" => {
             let tok = tokens[split];
             println!("Processing token {tok}");
-            let res = get_operands(&tokens, split + 1, cursor, variables).unwrap();
+            let res = match get_operands(&tokens, split + 1, cursor, variables) {
+                Ok(res)=> res,
+                Err(_) => return Err("Failed to get operands!".to_string()),
+            };
             end_pos = res.2;
-            compare(parse_operator(tokens[split]).unwrap(), (res.0, res.1)).unwrap()
+            match compare(parse_operator(tokens[split]).expect("should work"), (res.0, res.1)) {
+                Ok(res) => res,
+                Err(err) => return Err(err),
+            }
         }
         "+" | "-" | "*" | "/" => {
-            let res = process_prefix(&tokens, split, cursor, variables).unwrap();
+            let res = match process_prefix(&tokens, split, cursor, variables) {
+                Ok(res)=> res,
+                Err(err) => return Err(err),
+            };
             end_pos = position + res.1 + 1;
             res.0
         }
         _ => {
-            let (res, advance_by) = get_value(tokens[split], &tokens, cursor, variables).unwrap();
+            let (res, advance_by) = match get_value(tokens[split], &tokens, cursor, variables) {
+                Ok(res) => res,
+                Err(err) => return Err(err),
+            };
             end_pos = split + advance_by + 1;
             res
         }
