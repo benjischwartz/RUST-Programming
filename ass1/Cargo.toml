@@ -2,6 +2,6 @@
 resolver = "2"
 
 members = [
-    "lib_crate",
     "rslogo",
+    "lib_crate",
 ]
