@@ -5,6 +5,18 @@ fn print_success() {
 ////////// DO NOT CHANGE ABOVE HERE /////////
 
 // TODO: create `if_any!()` macro.
+macro_rules! if_any {
+    ($($x:expr),+; $y:block) =>
+    {
+        if $($x)||+ $y
+    };
+}
+
+macro_rules! if_any {
+    ($($e:expr),+; $block:block) => {
+        if $($e)||+ $block
+    }
+}
 
 
 ////////// DO NOT CHANGE BELOW HERE /////////
