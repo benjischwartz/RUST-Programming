@@ -92,7 +92,7 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
 }
 
 // converts from Vec<String> to HashMap<String, CellArgument>
-fn convert_variables(variables: Vec<String>, cells: &Vec<String, CellValue>) -> HashMap<String, CellArgument> {
+fn convert_variables(variables: Vec<String>, cells: &HashMap<String, CellValue>) -> HashMap<String, CellArgument> {
 
     let scalar_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
 
@@ -103,8 +103,8 @@ fn convert_variables(variables: Vec<String>, cells: &Vec<String, CellValue>) -> 
     for variable in variables {
         // Simple case of scalar variable
         if scalar_variable_regex.is_match(&variable) {
-            let cell_value = cells[&variable];
-            result_map.insert(variable, cell_value);
+            let cell_value = cells[&variable].clone();
+            result_map.insert(variable, CellArgument::Value(cell_value));
         }
     }
     todo!()
