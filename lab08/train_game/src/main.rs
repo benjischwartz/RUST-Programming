@@ -1,4 +1,6 @@
-use itertools::Itertools;
+use std::thread;
+use std::vec::IntoIter;
+use itertools::{Chunk, Itertools};
 mod test;
 fn main() {
     // take number from commandline arg
@@ -29,12 +31,24 @@ fn main() {
     // you only need to change code from here onwards
     // first, split up the digits_operators into 6 vecs
     // using the chunks method
+    let num_threads = 16usize;
+    let mut chunked: Vec<Vec<(Vec<i32>, Vec<char>)>> = Vec::new();
 
-    for (digits, operators) in digits_operators {
-        // go through one combination of
-        // operators and see if it works
-        let _ = calculate(digits, operators);
+    for chunk in &digits_operators.into_iter().chunks(length/num_threads) {
+        chunked.push(chunk.collect_vec())
     }
+
+
+    for chunk in chunked {
+        thread::scope(|s| {
+            s.spawn(|| {
+                for (digits, operators) in chunk {
+                    let _ = calculate(digits, operators);
+                }
+            });
+        });
+    }
+
 }
 
 // DO NOT MODIFY
