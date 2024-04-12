@@ -10,7 +10,8 @@ use std::fmt::format;
 use log::info;
 use rsheet_lib::cell_value::CellValue;
 use rsheet_lib::command_runner::{CellArgument, CommandRunner};
-use regex::Regex;
+use fancy_regex::Regex;
+use rsheet_lib::cells::{column_name_to_number, column_number_to_name};
 use crate::structs::Command;
 
 pub fn start_server<M>(mut manager: M) -> Result<(), Box<dyn Error>>
@@ -45,7 +46,7 @@ fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<
         match first_word {
             "get" => {
                 let remainder = words.collect::<Vec<&str>>().join(" ");
-                if cell_address_regex.is_match(&remainder) {
+                if cell_address_regex.is_match(&remainder).unwrap() {
                     Ok(Command::Get(remainder))
                 } else {
                     Err("Invalid cell reference in get command".to_string())
@@ -56,7 +57,7 @@ fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<
                     None => return Err("No cell reference given in set command".to_string()),
                     Some(addr) => addr
                 };
-                if cell_address_regex.is_match(addr) {
+                if cell_address_regex.is_match(addr).unwrap() {
                     let expression = words.collect::<Vec<&str>>().join(" ");
                     Ok(Command::Set(addr.to_string(), expression))
                 } else {
@@ -73,17 +74,13 @@ fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<
 fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> Option<Reply> {
     match command {
         Command::Get(addr) => {
-            if cells.contains_key(&addr) {
-                let cell_value = cells[&addr].clone();
-                Some(Reply::Value(addr, cell_value))
-            } else {
-                Some(Reply::Value(addr, CellValue::None))
-            }
+            // Handles case where cells doesn't contain the address
+            Some(Reply::Value(addr.clone(), cells.entry(addr).or_insert(CellValue::None).clone()))
         }
         Command::Set(addr, expression) => {
             let runner = CommandRunner::new(&expression);
             let variables = runner.find_variables();
-
+            let map = convert_variables(variables, cells);
             cells.insert(addr, CommandRunner::new(&expression).run(&Default::default()));
             None
         }
@@ -92,20 +89,87 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
 }
 
 // converts from Vec<String> to HashMap<String, CellArgument>
-fn convert_variables(variables: Vec<String>, cells: &HashMap<String, CellValue>) -> HashMap<String, CellArgument> {
+fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellValue>) -> Result<HashMap<String, CellArgument>, String> {
 
     let scalar_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
-
-    // let vector_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+_[A-Z]+\d+$").unwrap();
-    // let matrix_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+_[A-Z]+\d+$").unwrap();
+    let vector_variable_regex = Regex::new(r"^[A-Z]+(\d+)_[A-Z]+\1$").unwrap();
+    let matrix_variable_regex = Regex::new(r"^[A-Z]+\d+_[A-Z]+\d+$").unwrap();
+    let column_regex = Regex::new(r"[A-Z]+").unwrap();
+    let row_regex = Regex::new(r"\d+").unwrap();
 
     let mut result_map: HashMap<String, CellArgument> = HashMap::new();
     for variable in variables {
         // Simple case of scalar variable
-        if scalar_variable_regex.is_match(&variable) {
-            let cell_value = cells[&variable].clone();
+        if scalar_variable_regex.is_match(&variable).unwrap() {
+            println!("{variable} is a scalar variable");
+
+            // Handles case where cells doesn't contain the variable
+            let cell_value = cells.entry(variable.clone()).or_insert(CellValue::None).clone();
             result_map.insert(variable, CellArgument::Value(cell_value));
         }
+        else if vector_variable_regex.is_match(&variable).unwrap() {
+            println!("{variable} is a vector variable");
+            let mut vector_variables: Vec<CellValue> = Vec::new();
+            let mut row = row_regex.find(&variable).unwrap().unwrap().as_str();
+            let mut columns = Vec::new();
+            for column in column_regex.find_iter(&variable) {
+                columns.push(column.unwrap().as_str());
+            }
+            if columns.len() != 2 {
+                println!("Invalid cell address format: {variable}");
+                let len = columns.len();
+                return Err(format!("Invalid cell address format: {variable}"));
+            }
+
+            let start_idx = column_name_to_number(columns[0]);
+            let finish_idx = column_name_to_number(columns[1]);
+            for col in start_idx..=finish_idx {
+                let current_cell = column_number_to_name(col) + row;
+                vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
+            }
+            println!("DONE: {:?}", vector_variables);
+            result_map.insert(variable, CellArgument::Vector(vector_variables));
+        }
+        else if matrix_variable_regex.is_match(&variable).unwrap() {
+            println!("{variable} is a matrix variable");
+            let mut matrix_variables: Vec<Vec<CellValue>> = Vec::new();
+            let mut rows: Vec<u32> = Vec::new();
+            let mut columns: Vec<&str> = Vec::new();
+            for row in row_regex.find_iter(&variable) {
+                let res = row.clone().unwrap().as_str().parse::<u32>().unwrap();
+                rows.push(row.unwrap().as_str().parse::<u32>().unwrap());
+            }
+            for column in column_regex.find_iter(&variable) {
+                columns.push(column.unwrap().as_str());
+            }
+            if columns.len() != 2 || rows.len() != 2 {
+                println!("Invalid cell address format: {variable}");
+                let len = columns.len();
+                return Err(format!("Invalid cell address format: {variable}"));
+            }
+
+            let start_row_idx = rows[0];
+            println!("start row: {start_row_idx}");
+            let finish_row_idx = rows[1];
+            println!("finish row: {finish_row_idx}");
+            let start_col_idx = column_name_to_number(columns[0]);
+            let finish_col_idx = column_name_to_number(columns[1]);
+            for row in start_row_idx..=finish_row_idx {
+                let mut vector_variables: Vec<CellValue> = Vec::new();
+                for col in start_col_idx..=finish_col_idx {
+                    let current_cell = column_number_to_name(col) + row.to_string().as_str();
+                    let clone = current_cell.clone();
+                    println!("On current cell: {clone}");
+                    vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
+                }
+                matrix_variables.push(vector_variables);
+            }
+            println!("DONE: {:?}", matrix_variables);
+            result_map.insert(variable, CellArgument::Matrix(matrix_variables));
+        }
+        else {
+            println!("Unknown variable type");
+        }
     }
-    todo!()
+    Ok(result_map)
 }
