@@ -7,12 +7,13 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 // hint, hint
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 struct State {
     counter: i32,
 }
 
-fn handle_client(mut stream: TcpStream) {
+fn handle_client(mut stream: TcpStream, state: Arc<Mutex<State>>) {
     // setup buffer, and read from stream into buffer
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).unwrap();
@@ -26,6 +27,7 @@ fn handle_client(mut stream: TcpStream) {
 
     if header == "POST /counter HTTP/1.1" {
         //TODO: increment the counter
+        state.lock().unwrap().counter += 1;  // Mutex POISONING
     }
 
     let file = include_bytes!("../index.html");
@@ -33,6 +35,13 @@ fn handle_client(mut stream: TcpStream) {
     // TODO: replace triple brackets in file with the counter in state (array of bytes)
     //      - you should make sure your resulting content is still called file
     //      - or the below code will not work
+
+
+    let temp = std::str::from_utf8(file)
+        .unwrap()
+        .replace("{{{ counter }}}", &state.lock().unwrap().counter.to_string());
+
+    let file = temp.as_bytes();
 
     // DONT CHANGE ME
     let response = format!(
@@ -53,12 +62,15 @@ fn main() -> std::io::Result<()> {
     println!("Server running on port {}", port);
     // TODO: create new state, so that it can be safely
     //      shared between threads
+    let state = Arc::new(Mutex::new(State{ counter: 0}));
+
 
     // accept connections and process them serially
     for stream in listener.incoming() {
         // TODO: spawn a thread for each connection
         // TODO: pass the state to the thread (and the handle_client fn)
-        handle_client(stream.unwrap());
+        let state = state.clone();  // doesn't actually clone, incr ref counter
+        std::thread::spawn(|| handle_client(stream.unwrap(), state));
     }
     Ok(())
 }
