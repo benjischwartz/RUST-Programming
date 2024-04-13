@@ -1,7 +1,7 @@
 mod structs;
 use std::collections::HashMap;
 use std::env::var;
-use rsheet_lib::connect::{Manager, Reader, Writer};
+use rsheet_lib::connect::{ConnectionError, Manager, Reader, ReaderWriter, Writer};
 use rsheet_lib::replies::Reply;
 
 use std::error::Error;
@@ -22,7 +22,10 @@ where
     let (mut recv, mut send) = manager.accept_new_connection().unwrap();
     loop {
         info!("Just got message");
-        let msg = recv.read_message()?;
+        let msg = match recv.read_message() {
+            Ok(msg) => msg,
+            Err(_) => return Ok(())
+        };
         let command = match parse_command(msg, &mut cells) {
             Ok(command) => command,
             Err(err) => {
