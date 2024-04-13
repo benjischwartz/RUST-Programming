@@ -24,7 +24,7 @@ where
     loop {
         let (mut recv, mut send) = match manager.accept_new_connection() {
             Ok(connection) => connection,
-            Err(_) => continue
+            Err(_) => return Ok(())
         };
         let cells = cells_original.clone();
         let thread = thread::spawn( move || {
