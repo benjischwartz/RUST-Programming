@@ -80,8 +80,16 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
         Command::Set(addr, expression) => {
             let runner = CommandRunner::new(&expression);
             let variables = runner.find_variables();
-            let map = convert_variables(variables, cells);
-            cells.insert(addr, CommandRunner::new(&expression).run(&Default::default()));
+            let result_map = match convert_variables(variables, cells) {
+                Ok(result_map) => result_map,
+                Err(err) => {
+                    // todo: Propagate error message
+                    println!("{err}");
+                    return None
+                }
+            };
+            cells.insert(addr, CommandRunner::new(&expression).run(&result_map));
+            println!("Command executed... cells is now {:?}", cells);
             None
         }
         Command::None => None
@@ -168,7 +176,7 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
             result_map.insert(variable, CellArgument::Matrix(matrix_variables));
         }
         else {
-            println!("Unknown variable type");
+            return Err(format!("Invalid cell address format: {variable}"));
         }
     }
     Ok(result_map)
