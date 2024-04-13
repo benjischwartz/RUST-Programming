@@ -22,7 +22,10 @@ where
 {
     let mut cells_original: Arc<Mutex<HashMap<String, CellValue>>> = Arc::new(Mutex::new(HashMap::new()));
     loop {
-        let (mut recv, mut send) = manager.accept_new_connection().unwrap();
+        let (mut recv, mut send) = match manager.accept_new_connection() {
+            Ok(connection) => connection,
+            Err(_) => return Ok(())
+        };
         let cells = cells_original.clone();
         let thread = thread::spawn( move || {
             loop {
