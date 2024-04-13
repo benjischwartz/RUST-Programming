@@ -35,7 +35,7 @@ where
         };
         match execute_command(command, &mut cells) {
             None => {},
-            Ok(reply) => {
+            Some(reply) => {
                 send.write_message(reply);
             }
         };
