@@ -92,7 +92,6 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
                 }
             };
             cells.insert(addr, CommandRunner::new(&expression).run(&result_map));
-            println!("Command executed... cells is now {:?}", cells);
             None
         }
         Command::None => None
@@ -112,14 +111,12 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
     for variable in variables {
         // Simple case of scalar variable
         if scalar_variable_regex.is_match(&variable).unwrap() {
-            println!("{variable} is a scalar variable");
 
             // Handles case where cells doesn't contain the variable
             let cell_value = cells.entry(variable.clone()).or_insert(CellValue::None).clone();
             result_map.insert(variable, CellArgument::Value(cell_value));
         }
         else if vector_variable_regex.is_match(&variable).unwrap() {
-            println!("{variable} is a vector variable");
             let mut vector_variables: Vec<CellValue> = Vec::new();
             let mut row = row_regex.find(&variable).unwrap().unwrap().as_str();
             let mut columns = Vec::new();
@@ -127,7 +124,6 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
                 columns.push(column.unwrap().as_str());
             }
             if columns.len() != 2 {
-                println!("Invalid cell address format: {variable}");
                 let len = columns.len();
                 return Err(format!("Invalid cell address format: {variable}"));
             }
@@ -138,11 +134,9 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
                 let current_cell = column_number_to_name(col) + row;
                 vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
             }
-            println!("DONE: {:?}", vector_variables);
             result_map.insert(variable, CellArgument::Vector(vector_variables));
         }
         else if matrix_variable_regex.is_match(&variable).unwrap() {
-            println!("{variable} is a matrix variable");
             let mut matrix_variables: Vec<Vec<CellValue>> = Vec::new();
             let mut rows: Vec<u32> = Vec::new();
             let mut columns: Vec<&str> = Vec::new();
@@ -154,15 +148,12 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
                 columns.push(column.unwrap().as_str());
             }
             if columns.len() != 2 || rows.len() != 2 {
-                println!("Invalid cell address format: {variable}");
                 let len = columns.len();
                 return Err(format!("Invalid cell address format: {variable}"));
             }
 
             let start_row_idx = rows[0];
-            println!("start row: {start_row_idx}");
             let finish_row_idx = rows[1];
-            println!("finish row: {finish_row_idx}");
             let start_col_idx = column_name_to_number(columns[0]);
             let finish_col_idx = column_name_to_number(columns[1]);
             for row in start_row_idx..=finish_row_idx {
@@ -170,12 +161,10 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
                 for col in start_col_idx..=finish_col_idx {
                     let current_cell = column_number_to_name(col) + row.to_string().as_str();
                     let clone = current_cell.clone();
-                    println!("On current cell: {clone}");
                     vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
                 }
                 matrix_variables.push(vector_variables);
             }
-            println!("DONE: {:?}", matrix_variables);
             result_map.insert(variable, CellArgument::Matrix(matrix_variables));
         }
         else {
