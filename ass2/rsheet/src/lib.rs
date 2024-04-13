@@ -62,6 +62,9 @@ fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<
                 };
                 if cell_address_regex.is_match(addr).unwrap() {
                     let expression = words.collect::<Vec<&str>>().join(" ");
+                    if expression.len() == 0 {
+                        return Err("Must provide expression for set".to_string());
+                    }
                     Ok(Command::Set(addr.to_string(), expression))
                 } else {
                     Err("Invalid cell reference in set command".to_string())
