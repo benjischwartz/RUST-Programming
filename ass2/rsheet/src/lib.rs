@@ -34,10 +34,13 @@ where
             },
         };
         match execute_command(command, &mut cells) {
-            None => {},
-            Some(reply) => {
+            Err(err) => {
+                send.write_message(Reply::Error(err));
+            },
+            Ok(Some(reply)) => {
                 send.write_message(reply);
             }
+            Ok(None) => {}
         };
     }
 }
@@ -77,11 +80,19 @@ fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<
     }
 }
 
-fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> Option<Reply> {
+fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> Result<Option<Reply>, String> {
     match command {
         Command::Get(addr) => {
+            // Handle case where cell contains dependency error
+            if cells.contains_key(&addr) {
+                if let CellValue::Error(err) = cells[&addr].clone() {
+                    if err.eq("Dependency error") {
+                        return Err(err);
+                    }
+                }
+            }
             // Handles case where cells doesn't contain the address
-            Some(Reply::Value(addr.clone(), cells.entry(addr).or_insert(CellValue::None).clone()))
+            Ok(Some(Reply::Value(addr.clone(), cells.entry(addr).or_insert(CellValue::None).clone())))
         }
         Command::Set(addr, expression) => {
             let runner = CommandRunner::new(&expression);
@@ -89,14 +100,17 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
             let result_map = match convert_variables(variables, cells) {
                 Ok(result_map) => result_map,
                 Err(err) => {
-                    // todo: Propagate error message
-                    return None
+                    // Check for dependency error
+                    if err.eq("Dependency error") {
+                        cells.insert(addr, CellValue::Error(err));
+                    }
+                    return Ok(None);
                 }
             };
             cells.insert(addr, CommandRunner::new(&expression).run(&result_map));
-            None
+            return Ok(None);
         }
-        Command::None => None
+        Command::None => return Ok(None)
     }
 }
 
@@ -111,13 +125,19 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
 
     let mut result_map: HashMap<String, CellArgument> = HashMap::new();
     for variable in variables {
+
         // Simple case of scalar variable
         if scalar_variable_regex.is_match(&variable).unwrap() {
-
-            // Handles case where cells doesn't contain the variable
+            if cells.contains_key(&variable) {
+                if let CellValue::Error(_) = cells[&variable].clone() {
+                    return Err("Dependency error".to_string());
+                }
+            }
             let cell_value = cells.entry(variable.clone()).or_insert(CellValue::None).clone();
             result_map.insert(variable, CellArgument::Value(cell_value));
         }
+
+        // Vector variables case
         else if vector_variable_regex.is_match(&variable).unwrap() {
             let mut vector_variables: Vec<CellValue> = Vec::new();
             let mut row = row_regex.find(&variable).unwrap().unwrap().as_str();
@@ -134,10 +154,17 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
             let finish_idx = column_name_to_number(columns[1]);
             for col in start_idx..=finish_idx {
                 let current_cell = column_number_to_name(col) + row;
+                if cells.contains_key(&current_cell) {
+                    if let CellValue::Error(_) = cells[&current_cell].clone() {
+                        return Err("Dependency error".to_string());
+                    }
+                }
                 vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
             }
             result_map.insert(variable, CellArgument::Vector(vector_variables));
         }
+
+        // Matrix variables case
         else if matrix_variable_regex.is_match(&variable).unwrap() {
             let mut matrix_variables: Vec<Vec<CellValue>> = Vec::new();
             let mut rows: Vec<u32> = Vec::new();
@@ -162,7 +189,11 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
                 let mut vector_variables: Vec<CellValue> = Vec::new();
                 for col in start_col_idx..=finish_col_idx {
                     let current_cell = column_number_to_name(col) + row.to_string().as_str();
-                    let clone = current_cell.clone();
+                    if cells.contains_key(&current_cell) {
+                        if let CellValue::Error(_) = cells[&current_cell].clone() {
+                            return Err("Dependency error".to_string());
+                        }
+                    }
                     vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
                 }
                 matrix_variables.push(vector_variables);
