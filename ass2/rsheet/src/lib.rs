@@ -35,7 +35,7 @@ where
         };
         match execute_command(command, &mut cells) {
             None => {},
-            Some(reply) => {
+            Ok(reply) => {
                 send.write_message(reply);
             }
         };
@@ -87,7 +87,6 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
                 Ok(result_map) => result_map,
                 Err(err) => {
                     // todo: Propagate error message
-                    println!("{err}");
                     return None
                 }
             };
