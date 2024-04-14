@@ -6,6 +6,8 @@ use rsheet_lib::replies::Reply;
 
 use std::error::Error;
 use std::fmt::format;
+use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard};
+use std::thread;
 
 use log::info;
 use rsheet_lib::cell_value::CellValue;
@@ -18,15 +20,25 @@ pub fn start_server<M>(mut manager: M) -> Result<(), Box<dyn Error>>
 where
     M: Manager,
 {
-    let mut cells: HashMap<String, CellValue>= HashMap::new();
-    let (mut recv, mut send) = manager.accept_new_connection().unwrap();
+    let mut cells: Arc<RwLock<HashMap<String, CellValue>>> = Arc::new(RwLock::new(HashMap::new()));
+
+    thread::scope(|s| {
+        while let Ok((recv, send)) = manager.accept_new_connection() {
+            let cells = cells.clone();
+            s.spawn(|| handle_connection(Box::new(recv), Box::new(send), cells));
+        }
+    });
+    Ok(())
+}
+
+fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>) -> Result<(), ()> {
     loop {
         info!("Just got message");
         let msg = match recv.read_message() {
             Ok(msg) => msg,
-            Err(_) => return Ok(())
+            Err(_) => continue
         };
-        let command = match parse_command(msg, &mut cells) {
+        let command = match parse_command(msg) {
             Ok(command) => command,
             Err(err) => {
                 send.write_message(Reply::Error(err));
@@ -39,13 +51,13 @@ where
             },
             Ok(Some(reply)) => {
                 send.write_message(reply);
-            }
-            Ok(None) => {}
+            },
+            Ok(None) => continue,
         };
     }
 }
 
-fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<Command, String> {
+fn parse_command(msg: String) -> Result<Command, String> {
     let mut words = msg.split_whitespace();
     let cell_address_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
     if let Some(first_word) = words.next() {
@@ -80,19 +92,21 @@ fn parse_command(msg: String, cells: &mut HashMap<String, CellValue>) -> Result<
     }
 }
 
-fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> Result<Option<Reply>, String> {
+fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>) -> Result<Option<Reply>, String> {
     match command {
         Command::Get(addr) => {
             // Handle case where cell contains dependency error
+            let mut cells = cells.read().unwrap();
             if cells.contains_key(&addr) {
-                if let CellValue::Error(err) = cells[&addr].clone() {
-                    if err.eq("Dependency error") {
-                        return Err(err);
-                    }
-                }
+                match cells[&addr].clone() {
+                    CellValue::Error(err) => {
+                        if err.eq("Dependency error") { return Err(err) };
+                    },
+                    _ => {},
+                };
+                return Ok(Some(Reply::Value(addr.clone(), cells[&addr].clone())))
             }
-            // Handles case where cells doesn't contain the address
-            Ok(Some(Reply::Value(addr.clone(), cells.entry(addr).or_insert(CellValue::None).clone())))
+            Ok(Some(Reply::Value(addr.clone(), CellValue::None)))
         }
         Command::Set(addr, expression) => {
             let runner = CommandRunner::new(&expression);
@@ -100,22 +114,21 @@ fn execute_command(command: Command, cells: &mut HashMap<String, CellValue>) -> 
             let result_map = match convert_variables(variables, cells) {
                 Ok(result_map) => result_map,
                 Err(err) => {
-                    // Check for dependency error
-                    if err.eq("Dependency error") {
-                        cells.insert(addr, CellValue::Error(err));
-                    }
+                    cells.write().unwrap().insert(addr, CellValue::Error(err));
                     return Ok(None);
                 }
             };
-            cells.insert(addr, CommandRunner::new(&expression).run(&result_map));
+            cells.write().unwrap().insert(addr, CommandRunner::new(&expression).run(&result_map));
+            //println!("Cells is now {:?}", cells.read().unwrap());
             return Ok(None);
+
         }
         Command::None => return Ok(None)
     }
 }
 
 // converts from Vec<String> to HashMap<String, CellArgument>
-fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellValue>) -> Result<HashMap<String, CellArgument>, String> {
+fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>) -> Result<HashMap<String, CellArgument>, String> {
 
     let scalar_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
     let vector_variable_regex = Regex::new(r"^[A-Z]+(\d+)_[A-Z]+\1$").unwrap();
@@ -124,23 +137,22 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
     let row_regex = Regex::new(r"\d+").unwrap();
 
     let mut result_map: HashMap<String, CellArgument> = HashMap::new();
+    let cells = cells.read().unwrap();
     for variable in variables {
 
         // Simple case of scalar variable
         if scalar_variable_regex.is_match(&variable).unwrap() {
-            if cells.contains_key(&variable) {
-                if let CellValue::Error(_) = cells[&variable].clone() {
-                    return Err("Dependency error".to_string());
-                }
-            }
-            let cell_value = cells.entry(variable.clone()).or_insert(CellValue::None).clone();
-            result_map.insert(variable, CellArgument::Value(cell_value));
+            let current_cell = variable;
+            match get_cell_value(&current_cell, &cells) {
+                Ok(value) => { result_map.insert(current_cell, CellArgument::Value(value)) },
+                Err(err) => { return Err(err)}
+            };
         }
 
         // Vector variables case
         else if vector_variable_regex.is_match(&variable).unwrap() {
             let mut vector_variables: Vec<CellValue> = Vec::new();
-            let mut row = row_regex.find(&variable).unwrap().unwrap().as_str();
+            let row = row_regex.find(&variable).unwrap().unwrap().as_str();
             let mut columns = Vec::new();
             for column in column_regex.find_iter(&variable) {
                 columns.push(column.unwrap().as_str());
@@ -154,12 +166,10 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
             let finish_idx = column_name_to_number(columns[1]);
             for col in start_idx..=finish_idx {
                 let current_cell = column_number_to_name(col) + row;
-                if cells.contains_key(&current_cell) {
-                    if let CellValue::Error(_) = cells[&current_cell].clone() {
-                        return Err("Dependency error".to_string());
-                    }
-                }
-                vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
+                match get_cell_value(&current_cell, &cells) {
+                    Ok(value) => { vector_variables.push(value) }
+                    Err(err) => { return Err(err)}
+                };
             }
             result_map.insert(variable, CellArgument::Vector(vector_variables));
         }
@@ -189,12 +199,10 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
                 let mut vector_variables: Vec<CellValue> = Vec::new();
                 for col in start_col_idx..=finish_col_idx {
                     let current_cell = column_number_to_name(col) + row.to_string().as_str();
-                    if cells.contains_key(&current_cell) {
-                        if let CellValue::Error(_) = cells[&current_cell].clone() {
-                            return Err("Dependency error".to_string());
-                        }
-                    }
-                    vector_variables.push(cells.entry(current_cell).or_insert(CellValue::None).clone());
+                    match get_cell_value(&current_cell, &cells) {
+                        Ok(value) => { vector_variables.push(value) }
+                        Err(err) => { return Err(err)}
+                    };
                 }
                 matrix_variables.push(vector_variables);
             }
@@ -205,4 +213,18 @@ fn convert_variables(variables: Vec<String>, cells: &mut HashMap<String, CellVal
         }
     }
     Ok(result_map)
+}
+
+// TODO: FIX THIS
+fn get_cell_value(current_cell: &String, cells: &RwLockReadGuard<HashMap<String, CellValue>>) -> Result<CellValue, String> {
+    if cells.contains_key(current_cell) {
+        match cells[current_cell].clone() {
+            CellValue::Error(_) => {
+                return Err("Dependency error".to_string());
+            },
+            _ => {},
+        };
+        return Ok(cells[current_cell].clone());
+    }
+    return Ok(CellValue::None);
 }
