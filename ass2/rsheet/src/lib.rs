@@ -7,6 +7,7 @@ use rsheet_lib::replies::Reply;
 use std::error::Error;
 use std::fmt::format;
 use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard};
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
 use log::info;
@@ -14,25 +15,36 @@ use rsheet_lib::cell_value::CellValue;
 use rsheet_lib::command_runner::{CellArgument, CommandRunner};
 use fancy_regex::Regex;
 use rsheet_lib::cells::{column_name_to_number, column_number_to_name};
-use crate::structs::Command;
+use crate::structs::{Command, DependencyNode};
 
 pub fn start_server<M>(mut manager: M) -> Result<(), Box<dyn Error>>
 where
     M: Manager,
 {
     let mut cells: Arc<RwLock<HashMap<String, CellValue>>> = Arc::new(RwLock::new(HashMap::new()));
+    let mut dependencies: HashMap<String, DependencyNode> = HashMap::new();
+
+    let (tx, rx) = mpsc::channel();
+
+    let handle = {
+        let cells = cells.clone();
+        thread::spawn(move || handle_dependency_updates(cells, rx))
+    };
 
     thread::scope(|s| {
         while let Ok((recv, send)) = manager.accept_new_connection() {
             let cells = cells.clone();
-            s.spawn(|| handle_connection(Box::new(recv), Box::new(send), cells));
-            //println!("Done");
+            let tx = tx.clone();
+            s.spawn(|| handle_connection(Box::new(recv), Box::new(send), cells, tx));
         }
     });
+
+    drop(tx);
+    handle.join().unwrap();
     Ok(())
 }
 
-fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>) -> Result<(), ()> {
+fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<String>) -> Result<(), ()> {
     loop {
         info!("Just got message");
         let msg = match recv.read_message() {
@@ -56,6 +68,11 @@ fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut c
             Ok(None) => continue,
         };
     }
+}
+
+fn handle_dependency_updates(cells: Arc<RwLock<HashMap<String, CellValue>>>, rx: Receiver<String>) {
+    let to_update = rx.recv().unwrap();
+    println!("Updating {to_update}");
 }
 
 fn parse_command(msg: String) -> Result<Command, String> {
@@ -112,6 +129,7 @@ fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, Cell
         Command::Set(addr, expression) => {
             let runner = CommandRunner::new(&expression);
             let variables = runner.find_variables();
+            // TODO: dependency logic goes somewhere here
             let result_map = match convert_variables(variables, cells) {
                 Ok(result_map) => result_map,
                 Err(err) => {
