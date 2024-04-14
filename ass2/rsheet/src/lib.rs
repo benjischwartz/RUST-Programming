@@ -26,6 +26,7 @@ where
         while let Ok((recv, send)) = manager.accept_new_connection() {
             let cells = cells.clone();
             s.spawn(|| handle_connection(Box::new(recv), Box::new(send), cells));
+            //println!("Done");
         }
     });
     Ok(())
@@ -36,7 +37,7 @@ fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut c
         info!("Just got message");
         let msg = match recv.read_message() {
             Ok(msg) => msg,
-            Err(_) => continue
+            Err(_) => return Ok(())
         };
         let command = match parse_command(msg) {
             Ok(command) => command,
