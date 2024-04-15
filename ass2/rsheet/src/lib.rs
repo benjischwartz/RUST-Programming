@@ -1,5 +1,5 @@
 mod structs;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env::var;
 use rsheet_lib::connect::{ConnectionError, Manager, Reader, ReaderWriter, Writer};
 use rsheet_lib::replies::Reply;
@@ -7,7 +7,7 @@ use rsheet_lib::replies::Reply;
 use std::error::Error;
 use std::fmt::format;
 use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, RecvError, Sender, SendError};
 use std::thread;
 
 use log::info;
@@ -22,13 +22,13 @@ where
     M: Manager,
 {
     let mut cells: Arc<RwLock<HashMap<String, CellValue>>> = Arc::new(RwLock::new(HashMap::new()));
-    let mut dependencies: HashMap<String, DependencyNode> = HashMap::new();
+    let dependencies: Arc<RwLock<HashMap<String, DependencyNode>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let (tx, rx) = mpsc::channel();
 
     let handle = {
         let cells = cells.clone();
-        thread::spawn(move || handle_dependency_updates(cells, rx))
+        thread::spawn(move || handle_dependency_updates(cells, rx, dependencies))
     };
 
     thread::scope(|s| {
@@ -44,7 +44,7 @@ where
     Ok(())
 }
 
-fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<String>) -> Result<(), ()> {
+fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, DependencyNode)>) -> Result<(), ()> {
     loop {
         info!("Just got message");
         let msg = match recv.read_message() {
@@ -58,21 +58,81 @@ fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut c
                 Command::None
             },
         };
-        match execute_command(command, &mut cells) {
+        let tx = tx.clone();
+        match execute_command(command, &mut cells, tx) {
             Err(err) => {
                 send.write_message(Reply::Error(err));
             },
             Ok(Some(reply)) => {
                 send.write_message(reply);
             },
-            Ok(None) => continue,
+            Ok(None) => {},
         };
+        let data = cells.read().unwrap();
+        //println!("cells: {:?}", data);
     }
 }
 
-fn handle_dependency_updates(cells: Arc<RwLock<HashMap<String, CellValue>>>, rx: Receiver<String>) {
-    let to_update = rx.recv().unwrap();
-    println!("Updating {to_update}");
+/*
+For each variable in formula, create if !exists and draw node to current.
+Update current node formula.
+Update all downstream nodes.
+ */
+fn handle_dependency_updates(mut cells: Arc<RwLock<HashMap<String, CellValue>>>,
+                             rx: Receiver<(String, DependencyNode)>,
+                             dependencies: Arc<RwLock<HashMap<String, DependencyNode>>>) {
+    loop {
+       match rx.recv() {
+            Ok((cell_address, depNode)) => {
+                //println!("Update received {cell_address}, {:?}", depNode);
+                let mut dependencies = dependencies.write().unwrap();
+
+                // CREATE OR UPDATE THE CURRENT
+                if dependencies.contains_key(&cell_address) {
+                    let existing_neighbors = dependencies[&cell_address].neighbors.clone();
+                    let updated_node = DependencyNode{ formula: depNode.formula.clone(), neighbors: existing_neighbors };
+                    dependencies.insert(cell_address.clone(),  updated_node);
+                } else {
+                    let new_node = DependencyNode { formula: depNode.formula, neighbors: Default::default() };
+                    //println!("New dep node created. Addr {cell_address}, Node {:?}", new_node);
+                    dependencies.insert(cell_address.clone(), new_node);
+                }
+
+                // CREATE OR UPDATE THE NEIGHBORS
+                for neighbor in depNode.neighbors {
+                    if !dependencies.contains_key(&neighbor) {
+                        let new_node = DependencyNode{formula: "".to_string(), neighbors: HashSet::from([cell_address.clone()])};
+                        //println!("Created neighbour: {:?}", new_node);
+                        dependencies.insert(neighbor, new_node);
+                    } else {
+                        let mut existing_neighbors = dependencies[&neighbor].neighbors.clone();
+                        existing_neighbors.insert(cell_address.clone());
+                        let mut existing_formula = dependencies[&neighbor].formula.clone();
+                        let updated_node = DependencyNode{ formula: existing_formula, neighbors: existing_neighbors};
+                        //println!("Updated neighbour: {:?}", updated_node);
+                        dependencies.insert(neighbor, updated_node);
+                    }
+                }
+
+                //println!("Dependency map: {:?}", dependencies);
+
+                // UPDATE ALL DOWNSTREAM CELLS
+                for neighbor in dependencies[&cell_address].neighbors.clone() {
+                    //println!("Updating downstream {neighbor}");
+                    // TODO: fix multiple level dependencies
+                    let runner = CommandRunner::new(&dependencies[&neighbor].formula.clone());
+                    let variables = runner.find_variables();
+                    let result_map = match convert_variables(variables, &mut cells, &mut Default::default()) {
+                        Ok(result_map) => result_map,
+                        Err(_) => return
+                    };
+                    cells.write().unwrap().insert(neighbor.clone(), runner.run(&result_map));
+                }
+
+            }
+            Err(_) => {return;}
+        };
+    }
 }
 
 fn parse_command(msg: String) -> Result<Command, String> {
@@ -110,7 +170,7 @@ fn parse_command(msg: String) -> Result<Command, String> {
     }
 }
 
-fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>) -> Result<Option<Reply>, String> {
+fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, DependencyNode)>) -> Result<Option<Reply>, String> {
     match command {
         Command::Get(addr) => {
             // Handle case where cell contains dependency error
@@ -130,15 +190,25 @@ fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, Cell
             let runner = CommandRunner::new(&expression);
             let variables = runner.find_variables();
             // TODO: dependency logic goes somewhere here
-            let result_map = match convert_variables(variables, cells) {
+            let mut dependencies: HashSet<String> = HashSet::new();
+            let result_map = match convert_variables(variables, cells, &mut dependencies) {
                 Ok(result_map) => result_map,
                 Err(err) => {
                     cells.write().unwrap().insert(addr, CellValue::Error(err));
                     return Ok(None);
                 }
             };
-            cells.write().unwrap().insert(addr, CommandRunner::new(&expression).run(&result_map));
-            //println!("Cells is now {:?}", cells.read().unwrap());
+            //println!("Dependencies: {:?}", dependencies);
+            let dep = DependencyNode{formula: expression.clone(), neighbors: dependencies};
+            //println!("Dep node: {:?}", dep);
+
+            cells.write().unwrap().insert(addr.clone(), CommandRunner::new(&expression).run(&result_map));
+
+            match tx.send((addr, dep)) {
+                Ok(_) => {}
+                Err(err) => {println!("{}", err)}
+            };
+
             return Ok(None);
 
         }
@@ -147,7 +217,7 @@ fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, Cell
 }
 
 // converts from Vec<String> to HashMap<String, CellArgument>
-fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>) -> Result<HashMap<String, CellArgument>, String> {
+fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>, dependencies: &mut HashSet<String>) -> Result<HashMap<String, CellArgument>, String> {
 
     let scalar_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
     let vector_variable_regex = Regex::new(r"^[A-Z]+(\d+)_[A-Z]+\1$").unwrap();
@@ -162,6 +232,7 @@ fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<Stri
         // Simple case of scalar variable
         if scalar_variable_regex.is_match(&variable).unwrap() {
             let current_cell = variable;
+            dependencies.insert(current_cell.clone());
             match get_cell_value(&current_cell, &cells) {
                 Ok(value) => { result_map.insert(current_cell, CellArgument::Value(value)) },
                 Err(err) => { return Err(err)}
@@ -185,6 +256,7 @@ fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<Stri
             let finish_idx = column_name_to_number(columns[1]);
             for col in start_idx..=finish_idx {
                 let current_cell = column_number_to_name(col) + row;
+                dependencies.insert(current_cell.clone());
                 match get_cell_value(&current_cell, &cells) {
                     Ok(value) => { vector_variables.push(value) }
                     Err(err) => { return Err(err)}
@@ -218,6 +290,7 @@ fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<Stri
                 let mut vector_variables: Vec<CellValue> = Vec::new();
                 for col in start_col_idx..=finish_col_idx {
                     let current_cell = column_number_to_name(col) + row.to_string().as_str();
+                    dependencies.insert(current_cell.clone());
                     match get_cell_value(&current_cell, &cells) {
                         Ok(value) => { vector_variables.push(value) }
                         Err(err) => { return Err(err)}
@@ -234,7 +307,6 @@ fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<Stri
     Ok(result_map)
 }
 
-// TODO: FIX THIS
 fn get_cell_value(current_cell: &String, cells: &RwLockReadGuard<HashMap<String, CellValue>>) -> Result<CellValue, String> {
     if cells.contains_key(current_cell) {
         match cells[current_cell].clone() {
