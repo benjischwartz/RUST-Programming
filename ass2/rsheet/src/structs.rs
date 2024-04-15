@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(Debug)]
 pub enum Command {
     Get(String),
@@ -5,8 +7,9 @@ pub enum Command {
     None,
 }
 
+#[derive(Debug)]
 pub struct DependencyNode {
-    formula: String,
-    neighbors: Vec<String>,
+    pub formula: String,
+    pub neighbors: HashSet<String>,
 }
 
