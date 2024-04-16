@@ -85,16 +85,15 @@ fn handle_dependency_updates(cells: &Arc<RwLock<HashMap<String, CellValue>>>,
     loop {
        match rx.recv() {
             Ok((cell_address, formula, upstream_dependencies)) => {
-                //println!("Update received {cell_address}, formula: {formula}, upstream: {:?}", upstream_dependencies);
                 let mut dependencies = dependencies.write().unwrap();
 
                 // CREATE OR UPDATE THE CURRENT
                 if dependencies.contains_key(&cell_address) {
                     let existing_neighbors = dependencies[&cell_address].neighbors.clone();
-                    let updated_node = DependencyNode{ address: cell_address.clone(), formula: formula, neighbors: existing_neighbors };
+                    let updated_node = DependencyNode{ address: cell_address.clone(), formula, neighbors: existing_neighbors };
                     dependencies.insert(cell_address.clone(),  updated_node);
                 } else {
-                    let new_node = DependencyNode { address: cell_address.clone(), formula: formula, neighbors: Default::default() };
+                    let new_node = DependencyNode { address: cell_address.clone(), formula, neighbors: Default::default() };
                     dependencies.insert(cell_address.clone(), new_node);
                 }
 
@@ -123,22 +122,17 @@ fn handle_dependency_updates(cells: &Arc<RwLock<HashMap<String, CellValue>>>,
                 let mut rec_stack: HashSet<String> = HashSet::new();
                 let mut visited: HashSet<String> = HashSet::new();
                 if detect_cycle(&dependencies, &dependencies[&cell_address], &mut rec_stack, &mut visited) {
-                    //println!("Cycle detected!!");
                     let mut cells = cells.write().unwrap();
                     for node in rec_stack {
                         cells.insert(node, CellValue::Error("Circular dependency error".to_string()));
-                        //println!("dependencies: {:?}", dependencies);
                         continue;
                     }
                 }
-                //println!("After cycle detect");
 
                 // UPDATE ALL DOWNSTREAM CELLS
                 for neighbor in dependencies[&cell_address].neighbors.clone() {
-                    dfs_update_dependencies(&cells, &dependencies, &neighbor);
+                    dfs_update_dependencies(cells, &dependencies, &neighbor);
                 }
-
-                //println!("dependencies: {:?}", dependencies);
 
             }
             Err(_) => {return;}
@@ -167,7 +161,7 @@ fn parse_command(msg: String) -> Result<Command, String>
                 };
                 if cell_address_regex.is_match(addr).unwrap() {
                     let expression = words.collect::<Vec<&str>>().join(" ");
-                    if expression.len() == 0 {
+                    if expression.is_empty() {
                         return Err("Must provide expression for set".to_string());
                     }
                     Ok(Command::Set(addr.to_string(), expression))
@@ -175,7 +169,7 @@ fn parse_command(msg: String) -> Result<Command, String>
                     Err("Invalid cell reference in set command".to_string())
                 }
             },
-            _ => return Err("Invalid operation: ".to_string() + first_word),
+            _ => Err("Invalid operation: ".to_string() + first_word),
         }
     } else {
         Err("No operation specified.".to_string())
@@ -191,12 +185,8 @@ fn execute_command(command: Command,
             // Handle case where cell contains dependency error
             let cells = cells.read().unwrap();
             if cells.contains_key(&addr) {
-                match cells[&addr].clone() {
-                    CellValue::Error(err) => {
-                        if err.eq("Dependency error") { return Err(err) };
-                        if err.eq("Circular dependency error") { return Err(err) };
-                    },
-                    _ => {},
+                if let CellValue::Error(err) = cells[&addr].clone() {
+                    if err.eq("Dependency error") || err.eq("Circular dependency error") { return Err(err) };
                 };
                 return Ok(Some(Reply::Value(addr.clone(), cells[&addr].clone())))
             }
@@ -218,9 +208,9 @@ fn execute_command(command: Command,
                 Ok(_) => {}
                 Err(err) => {println!("{}", err)}
             };
-            return Ok(None);
+            Ok(None)
         }
-        Command::None => return Ok(None)
+        Command::None => Ok(None)
     }
 }
 
@@ -319,15 +309,12 @@ fn get_cell_value(current_cell: &String,
                   cells: &RwLockReadGuard<HashMap<String, CellValue>>) -> Result<CellValue, String>
 {
     if cells.contains_key(current_cell) {
-        match cells[current_cell].clone() {
-            CellValue::Error(_) => {
-                return Err("Dependency error".to_string());
-            },
-            _ => {},
+        if let CellValue::Error(_) = cells[current_cell].clone() {
+            return Err("Dependency error".to_string());
         };
         return Ok(cells[current_cell].clone());
     }
-    return Ok(CellValue::None);
+    Ok(CellValue::None)
 }
 
 fn dfs_update_dependencies(cells: &Arc<RwLock<HashMap<String, CellValue>>>,
@@ -360,10 +347,7 @@ fn detect_cycle(dependencies: &RwLockWriteGuard<HashMap<String, DependencyNode>>
         visited.insert(node.address.clone());
         rec_stack.insert(node.address.clone());
         for neighbour in &node.neighbors {
-            if !visited.contains(neighbour) && detect_cycle(dependencies, &dependencies[neighbour], rec_stack, visited) {
-                return true
-            }
-            else if rec_stack.contains(neighbour) {
+            if !visited.contains(neighbour) && detect_cycle(dependencies, &dependencies[neighbour], rec_stack, visited) || rec_stack.contains(neighbour) {
                 return true
             }
         }
