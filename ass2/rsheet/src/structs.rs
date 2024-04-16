@@ -9,6 +9,7 @@ pub enum Command {
 
 #[derive(Debug)]
 pub struct DependencyNode {
+    pub address: String,
     pub formula: String,
     pub neighbors: HashSet<String>,
 }
