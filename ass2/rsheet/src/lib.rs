@@ -10,6 +10,7 @@ use std::hash::Hash;
 use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::mpsc::{Receiver, RecvError, Sender, SendError};
 use std::thread;
+use std::thread::current;
 
 use log::info;
 use rsheet_lib::cell_value::CellValue;
@@ -29,7 +30,7 @@ where
 
     let handle = {
         let cells = cells.clone();
-        thread::spawn(move || handle_dependency_updates(cells, rx, dependencies))
+        thread::spawn(move || handle_dependency_updates(&cells, rx, &dependencies))
     };
 
     thread::scope(|s| {
@@ -45,7 +46,11 @@ where
     Ok(())
 }
 
-fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, String, HashSet<String>)>) -> Result<(), ()> {
+fn handle_connection(mut recv: Box<dyn Reader>,
+                     mut send: Box<dyn Writer>,
+                     mut cells: Arc<RwLock<HashMap<String, CellValue>>>,
+                     tx: Sender<(String, String, HashSet<String>)>) -> Result<(), ()>
+{
     loop {
         info!("Just got message");
         let msg = match recv.read_message() {
@@ -79,43 +84,67 @@ For each variable in formula, create if !exists and draw node to current.
 Update current node formula.
 Update all downstream nodes.
  */
-fn handle_dependency_updates(mut cells: Arc<RwLock<HashMap<String, CellValue>>>,
+fn handle_dependency_updates(cells: &Arc<RwLock<HashMap<String, CellValue>>>,
                              rx: Receiver<(String, String, HashSet<String>)>,
-                             dependencies: Arc<RwLock<HashMap<String, DependencyNode>>>) {
+                             dependencies: &Arc<RwLock<HashMap<String, DependencyNode>>>)
+{
     loop {
        match rx.recv() {
             Ok((cell_address, formula, upstream_dependencies)) => {
-                //println!("Update received {cell_address}, {:?}", depNode);
+                //println!("Update received {cell_address}, formula: {formula}, upstream: {:?}", upstream_dependencies);
                 let mut dependencies = dependencies.write().unwrap();
 
                 // CREATE OR UPDATE THE CURRENT
                 if dependencies.contains_key(&cell_address) {
                     let existing_neighbors = dependencies[&cell_address].neighbors.clone();
-                    let updated_node = DependencyNode{ formula: formula, neighbors: existing_neighbors };
+                    let updated_node = DependencyNode{ address: cell_address.clone(), formula: formula, neighbors: existing_neighbors };
                     dependencies.insert(cell_address.clone(),  updated_node);
                 } else {
-                    let new_node = DependencyNode { formula: formula, neighbors: Default::default() };
+                    let new_node = DependencyNode { address: cell_address.clone(), formula: formula, neighbors: Default::default() };
                     dependencies.insert(cell_address.clone(), new_node);
                 }
 
                 // CREATE OR UPDATE THE NEIGHBORS
-                for upstream_dep in upstream_dependencies {
-                    if !dependencies.contains_key(&upstream_dep) {
-                        let new_node = DependencyNode{formula: "".to_string(), neighbors: HashSet::from([cell_address.clone()])};
-                        dependencies.insert(upstream_dep, new_node);
+                for upstream_dep in &upstream_dependencies {
+                    if !dependencies.contains_key(upstream_dep) {
+                        let new_node = DependencyNode{ address: upstream_dep.clone(), formula: "".to_string(), neighbors: HashSet::from([cell_address.clone()])};
+                        dependencies.insert(upstream_dep.clone(), new_node);
                     } else {
-                        let mut existing_neighbors = dependencies[&upstream_dep].neighbors.clone();
+                        let mut existing_neighbors = dependencies[upstream_dep].neighbors.clone();
                         existing_neighbors.insert(cell_address.clone());
-                        let mut existing_formula = dependencies[&upstream_dep].formula.clone();
-                        let updated_node = DependencyNode{ formula: existing_formula, neighbors: existing_neighbors};
-                        dependencies.insert(upstream_dep, updated_node);
+                        let mut existing_formula = dependencies[upstream_dep].formula.clone();
+                        let updated_node = DependencyNode{ address: upstream_dep.clone(), formula: existing_formula, neighbors: existing_neighbors};
+                        dependencies.insert(upstream_dep.clone(), updated_node);
                     }
                 }
 
+                // REMOVE OLD CONNECTIONS
+                for (addr, mut node) in dependencies.iter_mut() {
+                    if node.neighbors.contains(&cell_address) && !upstream_dependencies.contains(addr) {
+                        node.neighbors.remove(&cell_address);
+                    }
+                }
+
+                // CYCLE DETECT
+                let mut rec_stack: HashSet<String> = HashSet::new();
+                let mut visited: HashSet<String> = HashSet::new();
+                if detect_cycle(&dependencies, &dependencies[&cell_address], &mut rec_stack, &mut visited) {
+                    //println!("Cycle detected!!");
+                    let mut cells = cells.write().unwrap();
+                    for node in rec_stack {
+                        cells.insert(node, CellValue::Error("Circular dependency error".to_string()));
+                        //println!("dependencies: {:?}", dependencies);
+                        continue;
+                    }
+                }
+                //println!("After cycle detect");
+
                 // UPDATE ALL DOWNSTREAM CELLS
                 for neighbor in dependencies[&cell_address].neighbors.clone() {
-                    dfs_update_dependencies(&mut cells, &mut dependencies, &neighbor);
+                    dfs_update_dependencies(&cells, &dependencies, &neighbor);
                 }
+
+                //println!("dependencies: {:?}", dependencies);
 
             }
             Err(_) => {return;}
@@ -123,7 +152,8 @@ fn handle_dependency_updates(mut cells: Arc<RwLock<HashMap<String, CellValue>>>,
     }
 }
 
-fn parse_command(msg: String) -> Result<Command, String> {
+fn parse_command(msg: String) -> Result<Command, String>
+{
     let mut words = msg.split_whitespace();
     let cell_address_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
     if let Some(first_word) = words.next() {
@@ -158,7 +188,10 @@ fn parse_command(msg: String) -> Result<Command, String> {
     }
 }
 
-fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, String, HashSet<String>)>) -> Result<Option<Reply>, String> {
+fn execute_command(command: Command,
+                   cells: &mut Arc<RwLock<HashMap<String, CellValue>>>,
+                   tx: Sender<(String, String, HashSet<String>)>) -> Result<Option<Reply>, String>
+{
     match command {
         Command::Get(addr) => {
             // Handle case where cell contains dependency error
@@ -167,6 +200,7 @@ fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, Cell
                 match cells[&addr].clone() {
                     CellValue::Error(err) => {
                         if err.eq("Dependency error") { return Err(err) };
+                        if err.eq("Circular dependency error") { return Err(err) };
                     },
                     _ => {},
                 };
@@ -197,7 +231,10 @@ fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, Cell
 }
 
 // converts from Vec<String> to HashMap<String, CellArgument>
-fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>, dependencies: &mut HashSet<String>) -> Result<HashMap<String, CellArgument>, String> {
+fn convert_variables(variables: Vec<String>,
+                     cells: &Arc<RwLock<HashMap<String, CellValue>>>,
+                     dependencies: &mut HashSet<String>) -> Result<HashMap<String, CellArgument>, String>
+{
 
     let scalar_variable_regex: Regex = Regex::new(r"^[A-Z]+\d+$").unwrap();
     let vector_variable_regex = Regex::new(r"^[A-Z]+(\d+)_[A-Z]+\1$").unwrap();
@@ -287,7 +324,9 @@ fn convert_variables(variables: Vec<String>, cells: &mut Arc<RwLock<HashMap<Stri
     Ok(result_map)
 }
 
-fn get_cell_value(current_cell: &String, cells: &RwLockReadGuard<HashMap<String, CellValue>>) -> Result<CellValue, String> {
+fn get_cell_value(current_cell: &String,
+                  cells: &RwLockReadGuard<HashMap<String, CellValue>>) -> Result<CellValue, String>
+{
     if cells.contains_key(current_cell) {
         match cells[current_cell].clone() {
             CellValue::Error(_) => {
@@ -300,7 +339,7 @@ fn get_cell_value(current_cell: &String, cells: &RwLockReadGuard<HashMap<String,
     return Ok(CellValue::None);
 }
 
-fn dfs_update_dependencies(cells: &mut Arc<RwLock<HashMap<String, CellValue>>>,
+fn dfs_update_dependencies(cells: &Arc<RwLock<HashMap<String, CellValue>>>,
                            dependencies: &RwLockWriteGuard<HashMap<String, DependencyNode>>,
                            cell_address: &String)
 {
@@ -320,52 +359,24 @@ fn dfs_update_dependencies(cells: &mut Arc<RwLock<HashMap<String, CellValue>>>,
     }
 }
 
-/*
-Ok((cell_address, depNode)) => {
-                //println!("Update received {cell_address}, {:?}", depNode);
-                let mut dependencies = dependencies.write().unwrap();
-
-                // CREATE OR UPDATE THE CURRENT
-                if dependencies.contains_key(&cell_address) {
-                    let existing_neighbors = dependencies[&cell_address].neighbors.clone();
-                    let updated_node = DependencyNode{ formula: depNode.formula.clone(), neighbors: existing_neighbors };
-                    dependencies.insert(cell_address.clone(),  updated_node);
-                } else {
-                    let new_node = DependencyNode { formula: depNode.formula, neighbors: Default::default() };
-                    //println!("New dep node created. Addr {cell_address}, Node {:?}", new_node);
-                    dependencies.insert(cell_address.clone(), new_node);
-                }
-
-                // CREATE OR UPDATE THE NEIGHBORS
-                for neighbor in depNode.neighbors {
-                    if !dependencies.contains_key(&neighbor) {
-                        let new_node = DependencyNode{formula: "".to_string(), neighbors: HashSet::from([cell_address.clone()])};
-                        //println!("Created neighbour: {:?}", new_node);
-                        dependencies.insert(neighbor, new_node);
-                    } else {
-                        let mut existing_neighbors = dependencies[&neighbor].neighbors.clone();
-                        existing_neighbors.insert(cell_address.clone());
-                        let mut existing_formula = dependencies[&neighbor].formula.clone();
-                        let updated_node = DependencyNode{ formula: existing_formula, neighbors: existing_neighbors};
-                        //println!("Updated neighbour: {:?}", updated_node);
-                        dependencies.insert(neighbor, updated_node);
-                    }
-                }
-
-                //println!("Dependency map: {:?}", dependencies);
-
-                // UPDATE ALL DOWNSTREAM CELLS
-                for neighbor in dependencies[&cell_address].neighbors.clone() {
-                    //println!("Updating downstream {neighbor}");
-                    // TODO: fix multiple level dependencies
-                    let runner = CommandRunner::new(&dependencies[&neighbor].formula.clone());
-                    let variables = runner.find_variables();
-                    let result_map = match convert_variables(variables, &mut cells, &mut Default::default()) {
-                        Ok(result_map) => result_map,
-                        Err(_) => return
-                    };
-                    cells.write().unwrap().insert(neighbor.clone(), runner.run(&result_map));
-                }
-
+fn detect_cycle(dependencies: &RwLockWriteGuard<HashMap<String, DependencyNode>>,
+                node: &DependencyNode,
+                rec_stack: &mut HashSet<String>,
+                visited: &mut HashSet<String>) -> bool
+{
+    //println!("In cycle detect");
+    if !visited.contains(&node.address) {
+        visited.insert(node.address.clone());
+        rec_stack.insert(node.address.clone());
+        for neighbour in &node.neighbors {
+            if !visited.contains(neighbour) && detect_cycle(dependencies, &dependencies[neighbour], rec_stack, visited) {
+                return true
             }
- */
+            else if rec_stack.contains(neighbour) {
+                return true
+            }
+        }
+    }
+    rec_stack.remove(&node.address);
+    false
+}
