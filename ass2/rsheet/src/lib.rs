@@ -6,7 +6,8 @@ use rsheet_lib::replies::Reply;
 
 use std::error::Error;
 use std::fmt::format;
-use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard};
+use std::hash::Hash;
+use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::mpsc::{Receiver, RecvError, Sender, SendError};
 use std::thread;
 
@@ -44,7 +45,7 @@ where
     Ok(())
 }
 
-fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, DependencyNode)>) -> Result<(), ()> {
+fn handle_connection(mut recv: Box<dyn Reader>, mut send: Box<dyn Writer>, mut cells: Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, String, HashSet<String>)>) -> Result<(), ()> {
     loop {
         info!("Just got message");
         let msg = match recv.read_message() {
@@ -79,54 +80,41 @@ Update current node formula.
 Update all downstream nodes.
  */
 fn handle_dependency_updates(mut cells: Arc<RwLock<HashMap<String, CellValue>>>,
-                             rx: Receiver<(String, DependencyNode)>,
+                             rx: Receiver<(String, String, HashSet<String>)>,
                              dependencies: Arc<RwLock<HashMap<String, DependencyNode>>>) {
     loop {
        match rx.recv() {
-            Ok((cell_address, depNode)) => {
+            Ok((cell_address, formula, upstream_dependencies)) => {
                 //println!("Update received {cell_address}, {:?}", depNode);
                 let mut dependencies = dependencies.write().unwrap();
 
                 // CREATE OR UPDATE THE CURRENT
                 if dependencies.contains_key(&cell_address) {
                     let existing_neighbors = dependencies[&cell_address].neighbors.clone();
-                    let updated_node = DependencyNode{ formula: depNode.formula.clone(), neighbors: existing_neighbors };
+                    let updated_node = DependencyNode{ formula: formula, neighbors: existing_neighbors };
                     dependencies.insert(cell_address.clone(),  updated_node);
                 } else {
-                    let new_node = DependencyNode { formula: depNode.formula, neighbors: Default::default() };
-                    //println!("New dep node created. Addr {cell_address}, Node {:?}", new_node);
+                    let new_node = DependencyNode { formula: formula, neighbors: Default::default() };
                     dependencies.insert(cell_address.clone(), new_node);
                 }
 
                 // CREATE OR UPDATE THE NEIGHBORS
-                for neighbor in depNode.neighbors {
-                    if !dependencies.contains_key(&neighbor) {
+                for upstream_dep in upstream_dependencies {
+                    if !dependencies.contains_key(&upstream_dep) {
                         let new_node = DependencyNode{formula: "".to_string(), neighbors: HashSet::from([cell_address.clone()])};
-                        //println!("Created neighbour: {:?}", new_node);
-                        dependencies.insert(neighbor, new_node);
+                        dependencies.insert(upstream_dep, new_node);
                     } else {
-                        let mut existing_neighbors = dependencies[&neighbor].neighbors.clone();
+                        let mut existing_neighbors = dependencies[&upstream_dep].neighbors.clone();
                         existing_neighbors.insert(cell_address.clone());
-                        let mut existing_formula = dependencies[&neighbor].formula.clone();
+                        let mut existing_formula = dependencies[&upstream_dep].formula.clone();
                         let updated_node = DependencyNode{ formula: existing_formula, neighbors: existing_neighbors};
-                        //println!("Updated neighbour: {:?}", updated_node);
-                        dependencies.insert(neighbor, updated_node);
+                        dependencies.insert(upstream_dep, updated_node);
                     }
                 }
 
-                //println!("Dependency map: {:?}", dependencies);
-
                 // UPDATE ALL DOWNSTREAM CELLS
                 for neighbor in dependencies[&cell_address].neighbors.clone() {
-                    //println!("Updating downstream {neighbor}");
-                    // TODO: fix multiple level dependencies
-                    let runner = CommandRunner::new(&dependencies[&neighbor].formula.clone());
-                    let variables = runner.find_variables();
-                    let result_map = match convert_variables(variables, &mut cells, &mut Default::default()) {
-                        Ok(result_map) => result_map,
-                        Err(_) => return
-                    };
-                    cells.write().unwrap().insert(neighbor.clone(), runner.run(&result_map));
+                    dfs_update_dependencies(&mut cells, &mut dependencies, &neighbor);
                 }
 
             }
@@ -170,7 +158,7 @@ fn parse_command(msg: String) -> Result<Command, String> {
     }
 }
 
-fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, DependencyNode)>) -> Result<Option<Reply>, String> {
+fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, CellValue>>>, tx: Sender<(String, String, HashSet<String>)>) -> Result<Option<Reply>, String> {
     match command {
         Command::Get(addr) => {
             // Handle case where cell contains dependency error
@@ -189,28 +177,20 @@ fn execute_command(command: Command, cells: &mut Arc<RwLock<HashMap<String, Cell
         Command::Set(addr, expression) => {
             let runner = CommandRunner::new(&expression);
             let variables = runner.find_variables();
-            // TODO: dependency logic goes somewhere here
-            let mut dependencies: HashSet<String> = HashSet::new();
-            let result_map = match convert_variables(variables, cells, &mut dependencies) {
+            let mut upstream_dependencies: HashSet<String> = HashSet::new();
+            let result_map = match convert_variables(variables, cells, &mut upstream_dependencies) {
                 Ok(result_map) => result_map,
                 Err(err) => {
                     cells.write().unwrap().insert(addr, CellValue::Error(err));
                     return Ok(None);
                 }
             };
-            //println!("Dependencies: {:?}", dependencies);
-            let dep = DependencyNode{formula: expression.clone(), neighbors: dependencies};
-            //println!("Dep node: {:?}", dep);
-
             cells.write().unwrap().insert(addr.clone(), CommandRunner::new(&expression).run(&result_map));
-
-            match tx.send((addr, dep)) {
+            match tx.send((addr, expression, upstream_dependencies)) {
                 Ok(_) => {}
                 Err(err) => {println!("{}", err)}
             };
-
             return Ok(None);
-
         }
         Command::None => return Ok(None)
     }
@@ -319,3 +299,73 @@ fn get_cell_value(current_cell: &String, cells: &RwLockReadGuard<HashMap<String,
     }
     return Ok(CellValue::None);
 }
+
+fn dfs_update_dependencies(cells: &mut Arc<RwLock<HashMap<String, CellValue>>>,
+                           dependencies: &RwLockWriteGuard<HashMap<String, DependencyNode>>,
+                           cell_address: &String)
+{
+    let dep_node = &dependencies[cell_address];
+    // Update cell
+    let runner = CommandRunner::new(&dep_node.formula);
+    let variables = runner.find_variables();
+    let result_map = match convert_variables(variables, cells, &mut Default::default()) {
+        Ok(result_map) => result_map,
+        Err(_) => return
+    };
+    cells.write().unwrap().insert(cell_address.clone(), runner.run(&result_map));
+
+    // Recursively update neighbors
+    for neighbor in &dep_node.neighbors {
+        dfs_update_dependencies(cells, dependencies, neighbor);
+    }
+}
+
+/*
+Ok((cell_address, depNode)) => {
+                //println!("Update received {cell_address}, {:?}", depNode);
+                let mut dependencies = dependencies.write().unwrap();
+
+                // CREATE OR UPDATE THE CURRENT
+                if dependencies.contains_key(&cell_address) {
+                    let existing_neighbors = dependencies[&cell_address].neighbors.clone();
+                    let updated_node = DependencyNode{ formula: depNode.formula.clone(), neighbors: existing_neighbors };
+                    dependencies.insert(cell_address.clone(),  updated_node);
+                } else {
+                    let new_node = DependencyNode { formula: depNode.formula, neighbors: Default::default() };
+                    //println!("New dep node created. Addr {cell_address}, Node {:?}", new_node);
+                    dependencies.insert(cell_address.clone(), new_node);
+                }
+
+                // CREATE OR UPDATE THE NEIGHBORS
+                for neighbor in depNode.neighbors {
+                    if !dependencies.contains_key(&neighbor) {
+                        let new_node = DependencyNode{formula: "".to_string(), neighbors: HashSet::from([cell_address.clone()])};
+                        //println!("Created neighbour: {:?}", new_node);
+                        dependencies.insert(neighbor, new_node);
+                    } else {
+                        let mut existing_neighbors = dependencies[&neighbor].neighbors.clone();
+                        existing_neighbors.insert(cell_address.clone());
+                        let mut existing_formula = dependencies[&neighbor].formula.clone();
+                        let updated_node = DependencyNode{ formula: existing_formula, neighbors: existing_neighbors};
+                        //println!("Updated neighbour: {:?}", updated_node);
+                        dependencies.insert(neighbor, updated_node);
+                    }
+                }
+
+                //println!("Dependency map: {:?}", dependencies);
+
+                // UPDATE ALL DOWNSTREAM CELLS
+                for neighbor in dependencies[&cell_address].neighbors.clone() {
+                    //println!("Updating downstream {neighbor}");
+                    // TODO: fix multiple level dependencies
+                    let runner = CommandRunner::new(&dependencies[&neighbor].formula.clone());
+                    let variables = runner.find_variables();
+                    let result_map = match convert_variables(variables, &mut cells, &mut Default::default()) {
+                        Ok(result_map) => result_map,
+                        Err(_) => return
+                    };
+                    cells.write().unwrap().insert(neighbor.clone(), runner.run(&result_map));
+                }
+
+            }
+ */
