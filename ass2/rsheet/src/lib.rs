@@ -1,16 +1,12 @@
 mod structs;
 use std::collections::{HashMap, HashSet};
-use std::env::var;
-use rsheet_lib::connect::{ConnectionError, Manager, Reader, ReaderWriter, Writer};
+use rsheet_lib::connect::{Manager, Reader, Writer};
 use rsheet_lib::replies::Reply;
 
 use std::error::Error;
-use std::fmt::format;
-use std::hash::Hash;
 use std::sync::{Arc, mpsc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::sync::mpsc::{Receiver, RecvError, Sender, SendError};
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-use std::thread::current;
 
 use log::info;
 use rsheet_lib::cell_value::CellValue;
@@ -23,7 +19,7 @@ pub fn start_server<M>(mut manager: M) -> Result<(), Box<dyn Error>>
 where
     M: Manager,
 {
-    let mut cells: Arc<RwLock<HashMap<String, CellValue>>> = Arc::new(RwLock::new(HashMap::new()));
+    let cells: Arc<RwLock<HashMap<String, CellValue>>> = Arc::new(RwLock::new(HashMap::new()));
     let dependencies: Arc<RwLock<HashMap<String, DependencyNode>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let (tx, rx) = mpsc::channel();
@@ -60,22 +56,20 @@ fn handle_connection(mut recv: Box<dyn Reader>,
         let command = match parse_command(msg) {
             Ok(command) => command,
             Err(err) => {
-                send.write_message(Reply::Error(err));
+                let _ = send.write_message(Reply::Error(err));
                 Command::None
             },
         };
         let tx = tx.clone();
         match execute_command(command, &mut cells, tx) {
             Err(err) => {
-                send.write_message(Reply::Error(err));
+                let _ = send.write_message(Reply::Error(err));
             },
             Ok(Some(reply)) => {
-                send.write_message(reply);
+                let _ = send.write_message(reply);
             },
             Ok(None) => {},
         };
-        let data = cells.read().unwrap();
-        //println!("cells: {:?}", data);
     }
 }
 
@@ -112,14 +106,14 @@ fn handle_dependency_updates(cells: &Arc<RwLock<HashMap<String, CellValue>>>,
                     } else {
                         let mut existing_neighbors = dependencies[upstream_dep].neighbors.clone();
                         existing_neighbors.insert(cell_address.clone());
-                        let mut existing_formula = dependencies[upstream_dep].formula.clone();
+                        let existing_formula = dependencies[upstream_dep].formula.clone();
                         let updated_node = DependencyNode{ address: upstream_dep.clone(), formula: existing_formula, neighbors: existing_neighbors};
                         dependencies.insert(upstream_dep.clone(), updated_node);
                     }
                 }
 
                 // REMOVE OLD CONNECTIONS
-                for (addr, mut node) in dependencies.iter_mut() {
+                for (addr, node) in dependencies.iter_mut() {
                     if node.neighbors.contains(&cell_address) && !upstream_dependencies.contains(addr) {
                         node.neighbors.remove(&cell_address);
                     }
@@ -195,7 +189,7 @@ fn execute_command(command: Command,
     match command {
         Command::Get(addr) => {
             // Handle case where cell contains dependency error
-            let mut cells = cells.read().unwrap();
+            let cells = cells.read().unwrap();
             if cells.contains_key(&addr) {
                 match cells[&addr].clone() {
                     CellValue::Error(err) => {
@@ -265,7 +259,6 @@ fn convert_variables(variables: Vec<String>,
                 columns.push(column.unwrap().as_str());
             }
             if columns.len() != 2 {
-                let len = columns.len();
                 return Err(format!("Invalid cell address format: {variable}"));
             }
 
@@ -288,14 +281,12 @@ fn convert_variables(variables: Vec<String>,
             let mut rows: Vec<u32> = Vec::new();
             let mut columns: Vec<&str> = Vec::new();
             for row in row_regex.find_iter(&variable) {
-                let res = row.clone().unwrap().as_str().parse::<u32>().unwrap();
                 rows.push(row.unwrap().as_str().parse::<u32>().unwrap());
             }
             for column in column_regex.find_iter(&variable) {
                 columns.push(column.unwrap().as_str());
             }
             if columns.len() != 2 || rows.len() != 2 {
-                let len = columns.len();
                 return Err(format!("Invalid cell address format: {variable}"));
             }
 
