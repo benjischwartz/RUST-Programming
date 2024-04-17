@@ -23,8 +23,9 @@ impl<T> Clone for MyRc<T> {
         // TODO: Increment the refcount,
         // and return another MyRc<T> by copying the
         // inner struct of this MyRc.
-        unsafe { (*self.inner).refcount += 1; }
-        MyRc{inner: self.inner.clone()}
+		let inner = unsafe { &mut *self.inner};
+		inner.refcount += 1;
+        MyRc{inner: self.inner}
     }
 }
 
@@ -33,12 +34,11 @@ impl<T> Drop for MyRc<T> {
         // TODO: Decrement the refcount..
         // If it's 0, drop the Rc. You will need to use
         // Box::from_raw to do this.
-        unsafe {
-            (*self.inner).refcount -= 1;
-            if (*self.inner).refcount == 0 {
-                drop(Box::from_raw(self));
-            }
-        }
+		let inner = unsafe{ &mut *self.inner };
+        inner.refcount -= 1;
+		if inner.refcount == 0 {
+			unsafe { drop(Box::from_raw(self.inner)); }
+		}
     }
 }
 
