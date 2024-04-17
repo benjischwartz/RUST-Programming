@@ -18,6 +18,9 @@ unsafe fn list_delete_first(list: *mut List<i32>) -> *mut List<i32> {
     //             so we get a pointer to the second node
     //             for later!
     //             TODO: hmm... is this definitely sound?
+	if list == null() {
+		return null();
+	}
     let next = unsafe { (*list).next };
 
     // /!\ SAFETY: The list must be a valid linked list,
