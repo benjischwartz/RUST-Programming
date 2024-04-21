@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="CargoProjects">
+    <cargoProject FILE="$PROJECT_DIR$/lab01/exercises_01_starter/io/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab01/exercises_01_starter/dall-e-rs/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab02/tribonacci/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab02/to_upper/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab02/collections/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab02/data_analysis/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/my_first_borrow/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/pusheen/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/annotate_lifetimes/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/type_lifetimes/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/christmas_tree/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/first_home_buyers/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/pokedex/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab03/my_caesar/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab04/doctor_who/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab04/vector_operations/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab04/modularity/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab04/lib_crate/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/ass1/rslogo/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab05/pointy/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab05/dungeons_and_dragons/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab05/languages/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab07/fun_types/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab07/average_macro/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab07/macrokata/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab07/repetition/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab07/currying/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/ass2/rsheet/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab08/train_game/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab08/channels/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab08/webserver/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/lab09/myrc/Cargo.toml" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="3cbe65ed-453f-4b93-8c6f-cd0776544aa5" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/ass1/rslogo/output.svg" beforeDir="false" afterPath="$PROJECT_DIR$/ass1/rslogo/output.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab07/macrokata" beforeDir="false" afterPath="$PROJECT_DIR$/lab07/macrokata" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab07/macrokata/exercises/01_my_first_macro/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/lab07/macrokata/exercises/01_my_first_macro/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab07/macrokata/exercises/02_numbers/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/lab07/macrokata/exercises/02_numbers/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab07/macrokata/exercises/03_literal_variables/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/lab07/macrokata/exercises/03_literal_variables/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab07/macrokata/exercises/04_expression_variables/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/lab07/macrokata/exercises/04_expression_variables/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab07/macrokata/exercises/05_more_complex_example/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/lab07/macrokata/exercises/05_more_complex_example/main.rs" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Rust File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="5nh3up9e" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="2cITY9Vb8XaXuXp6x7KSC82KJWc" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Cargo.Doctest of Point (line 21).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of Point (line 28).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of caesar_shift (line 12).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of distance (line 41).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of distance (line 48).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of first (line 2).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of first (line 8).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of identity (line 4).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Doctest of split (line 16).executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run average_macro.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run christmas_tree.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run collections.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run currying.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run dall-e-rs.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run data_analysis.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run dungeons_and_dragons.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run first_home_buyers.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run fun_types.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run io.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run languages.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run my_caesar.executor&quot;: &quot;Debug&quot;,
+    &quot;Cargo.Run pokedex.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run pusheen.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run repetition.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run train_game.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Run tribonacci.executor&quot;: &quot;Debug&quot;,
+    &quot;Cargo.Test lib::tests.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;rwlock__impl&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/benjaminschwartz/Uni/COMP6991&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
+    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
+    &quot;org.rust.first.attach.projects&quot;: &quot;true&quot;,
+    &quot;org.rust.hideNoCargoProjectNotifications/Users/benjaminschwartz/Uni/COMP6991/ass1/Cargo.toml&quot;: &quot;true&quot;,
+    &quot;org.rust.hideNoCargoProjectNotifications/Users/benjaminschwartz/Uni/COMP6991/lab04/modularity/src/main.rs&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;language.rust.cargo.check&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/ass1" />
+      <recent name="$PROJECT_DIR$/lab04/lib_crate/src" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Cargo.Run train_game">
+    <configuration name="Run average_macro" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package average_macro --bin average_macro" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$/lab07/average_macro" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run currying" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package currying --bin currying" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$/lab07/currying" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run fun_types" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package fun_types --bin fun_types" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$/lab07/fun_types" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run repetition" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package repetition --bin repetition" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$/lab07/repetition" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run train_game" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package train_game --bin train_game" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$/lab08/train_game" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Cargo.Run train_game" />
+        <item itemvalue="Cargo.Run currying" />
+        <item itemvalue="Cargo.Run repetition" />
+        <item itemvalue="Cargo.Run average_macro" />
+        <item itemvalue="Cargo.Run fun_types" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="RustProjectSettings">
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="3cbe65ed-453f-4b93-8c6f-cd0776544aa5" name="Changes" comment="" />
+      <created>1707798139269</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1707798139269</updated>
+      <workItem from="1707798140521" duration="9374000" />
+      <workItem from="1707879452481" duration="4376000" />
+      <workItem from="1708392550863" duration="778000" />
+      <workItem from="1708397350915" duration="6883000" />
+      <workItem from="1708762984982" duration="753000" />
+      <workItem from="1708821524668" duration="11801000" />
+      <workItem from="1709098473097" duration="1857000" />
+      <workItem from="1709181096248" duration="11622000" />
+      <workItem from="1709291526138" duration="10069000" />
+      <workItem from="1709531720691" duration="4919000" />
+      <workItem from="1709616778829" duration="413000" />
+      <workItem from="1709705274089" duration="1399000" />
+      <workItem from="1709872208804" duration="2551000" />
+      <workItem from="1709875026388" duration="26509000" />
+      <workItem from="1710567284247" duration="11239000" />
+      <workItem from="1710734775335" duration="7525000" />
+      <workItem from="1710743681388" duration="23564000" />
+      <workItem from="1710997207235" duration="3155000" />
+      <workItem from="1711251516477" duration="43491000" />
+      <workItem from="1712027333021" duration="8232000" />
+      <workItem from="1712556472095" duration="12000" />
+      <workItem from="1712556860410" duration="18472000" />
+      <workItem from="1712900357213" duration="46280000" />
+      <workItem from="1713230605493" duration="15749000" />
+      <workItem from="1713335610057" duration="3567000" />
+      <workItem from="1713502745264" duration="510000" />
+      <workItem from="1713594298531" duration="2360000" />
+      <workItem from="1713679466605" duration="2203000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.psv" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="User">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="*" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="user">
+                    <value>
+                      <list>
+                        <option value="*" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/ass1/lib_crate/src/utils.rs</url>
+          <line>345</line>
+          <option name="timeStamp" value="20" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
