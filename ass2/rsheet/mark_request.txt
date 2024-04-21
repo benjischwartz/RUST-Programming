@@ -5,34 +5,26 @@
 These questions are listed in the spec, and you must fill them out
 to receive marks for the Design Questions.
 
-## Question 1: How did you represent get and set commands within your
-program? Identify an alternative representation, and either justify your
-choice; or explain why that alternative representation would be better.
+## Question 1:
 
-I represented get and set commands by using a 'Command' struct (found
-in the structs.rs file) which could either be `Get(String)` or
-`Set(String, String)` or `None`. The reason why `None` is an option is
-I chose this approach because of how my program functions.
-1) It first parses the line with the `parse_command` function. If an
+Using a 'Command' struct (found in the structs.rs file) which could 
+either be `Get(String)` or `Set(String, String)` or `None`. 
+1) Parses the line with the `parse_command` function. If an
  error is detected, then our command becomes a `Command::None`, otherwise
  it will be either Get or Set.
-2) This command is then parsed to the `execute_command` function which
-matches the different cases, and extracts the arguments, doing error
-checking in the process. This function returns a `Result<Option<Reply>, String>`
-type, since a Set command does not return anything, but it may return a
-Reply or an error, which is processed upstream.
+2) Command is passed to the `execute_command` function which
+matches the different cases, extracts the arguments.
+Returns a `Result<Option<Reply>, String>` type, since a Set command does 
+not return anything, but it may return a Reply or an error.
 
 An alternative representation would be to do the parsing of the command
 and the execution in the same function, thus removing the need for the
 'intermediate' Command struct. However, this would make the code less modular
 and would make the parse and execute function exceedingly long. I think
 my approach is better since you can separate out the logic of interpreting
-the commands (which might produce errors) and actually executing the command
-(which might produce a different set of errors).
+and executing the commands (producing different errors).
 
-## Question 2: Point to where you handle Scalar, Vector and Matrix variables.
-How much duplication of code did the Scalar, Vector and Matrix variables
-require? Could you have improved this?
+## Question 2: 
 
 I handle the Scalar, Vector and Matrix variable cases in the `convert_variables`
 function. I do this by having a separate regex string for the three types,
@@ -45,47 +37,39 @@ the innermost Matrix loop, we are pushing to a Vec, and at the conclusion of
 each innermost loop we push that Vec to another Vec, creating a 2D Vec.
 It's possible that I could have made the matching of the `cell_value` as its
 own function to avoid code re-duplication, but it wouldn't have saved writing
-a large amount of code.
+lots of code.
 
-## Question 3: Point out the lines of code that include any concurrent data
-structures. Contrast how your code would look if you were to make this assignment
-single-threaded.
+## Question 3: 
 
-Most of the concurrency logic is contained in the highest-level `start_server`
-function. I create a separate thread to handle dependency updates (which runs in
-a loop inside the `handle_dependency_updates` function, together with a `Receiver`),
-and then I create a thread for each connection that the manager receives (which runs
-in a loop in the `handle_connection` function, together with a `Sender`).
+Mostly contained in the highest-level `start_server` function. Separate 
+thread handles dependency updates (running in a loop inside the 
+`handle_dependency_updates` function, with a `Receiver`), and a thread 
+for each connection that the manager receives (running in a loop in the 
+`handle_connection` function, with a `Sender`).
 
-The purpose of having a `Sender` and `Receiver` is so that each "connection thread"
-has a way of communicating to the "dependency thread", and sending the necessary updates
-across threads.
+`Sender` and `Receiver` used so that each "connection thread" can communicate 
+to the "dependency thread".
 
-I maintained thread-safety with the spreadsheet data by using a `Arc<RwLock<...>>` around
-the map containing the cell values. This meant that reading and writing to the spreadsheet
-was thread-safe, and also meant that multiple threads could be reading at the same time
-from the spreadsheet - avoiding the problem of mutexes which lock the resource completely.
+Thread-safety maintained by using a `Arc<RwLock<...>>` around the map containing the 
+cell values, so multiple threads could be reading at the same time from the spreadsheet 
+but only ever one writing - avoiding the problem of mutexes which lock it completely.
 
-My code was initially single-threaded, and it looked very similar except for the fact that
-there was no separate thread for the dependency updates (rather this function would just
-be called directly whenever an update occurs), thus removing the need for a tx/rx pair
-across the threads. It also meant that the code simply ran in a loop in what was the
-`handle_connection` function.
+Was initially single-threaded- no separate thread for the dependency 
+updates - it would be called directly on updates (no need for a tx/rx pair across the 
+threads). Meant that the code simply ran in a loop in the `handle_connection` function.
 
-## Question 4: What line/lines of code show how you deal with the "complex edge case"
-in part 4. Justify how your solution ensures you'll never have the problem described.
+## Question 4: 
 
 This complex edge case was essentially handled automatically because of my design choice.
 The thread that gets spawned first takes an `Arc<RwLock<...>>` of the cells, and thus
 it locks the `cells` object from being written to while the first thread is executing.
 More specifically, the `execute_command` takes a `&mut` of cells, which, as we know, can
-only ever be borrowed by one thread exclusively.
+only ever be borrowed by one thread exclusively. Essentially, threads which are performing
+the `Set` operations are blocking on each other, whereas the threads performing the `Get`
+operations are not - due to the `RwLock` around the `cells` object.
 See lines 35 and 63.
 
-## Question 5: Identify the thread(s) you're using to perform the calculations of updated
-dependencies. If you used a single thread, identify how would you need to change the code
-to use multiple threads to calculate dependency updates. If you're using multiple threads,
-describe how you've done so.
+## Question 5: 
 
 The thread that is used to perform the calculations of updated dependencies is the one
 spawned at line 28, which operates the `handle_dependency_updates` function. It takes a
