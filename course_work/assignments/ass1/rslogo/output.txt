@@ -1,0 +1,6 @@
+Processing line: WHILE EQ "TRUE "TRUE [
+in get bool function
+value: TRUE
+in get bool function
+value: TRUE
+CONDITION IS TRUE

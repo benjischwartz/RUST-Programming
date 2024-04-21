@@ -1,0 +1,124 @@
+# RSLogo Mark Request
+
+## Which stages are complete?
+
+Please mark stages that are complete with an [X].
+Stages that are partially complete should be marked with a [?].
+Stages that are not complete should be left blank (like [ ]).
+
+> [X] Stage 1 (Pen Controls)
+> [X] Stage 2 (Variables + Queries)
+> [X] Stage 3 (If + While)
+> [X] Stage 4 (The Stack)
+> [ ] Stage 5 (Procedures)
+
+## Design Excellence
+
+If you have completed a "design excellence" task, please write what
+the task was below (note, it MUST be on the list in the assignment or
+approved by COMP6991 staff).
+
+> Errors: I have been quite specific about what exactly caused the given error,
+and handled this in a graceful way where each function that is used in the parsing
+process returns a result, and the highest-level function handle_line returns this
+error back to the main function.
+
+> Testing: I created a test shell script (test_shell.sh) which iterates through
+the files and compares their diffs, as well as checking behaviour for when the
+sample parser produces no output file etc.
+
+> Zero-copy: My program is pretty much entirely zero-copy, with a small exception for cloning
+a line in order to strip it of 'MAKE/ADDASSIGN' prefixes in the handle_line util.
+
+
+Please write a paragraph or two (max. 250 words) describing how your design was
+influenced by this challenge, with specific reference to sections of your code.
+If you completed the "Pull Request" design excellence, please just leave a link
+to your PR.
+
+> My design was influenced by this in a couple of ways. For error handling, this meant
+that I needed to make sure very function returned a Result<> type so that I could
+propagate the error all the way back to the main function and exit gracefully.
+> For zero-copy, this meant that I needed to use shared borrows in all my function
+parameters to avoid copying, and also avoid mutating the line in any way. The one
+exception to this is line 52 in utils.rs
+
+## Design Limitations
+
+If you made any design decisions which you now regret making; but don't to go back and change them,
+let us know here. You can make up your design marks by acknowledging up to 5 things you would do
+differently now.
+
+> I regret not using a parser combinatory library like chumsky, as I feel that my
+solution was getting overly complicated when it came to the math parsing.
+
+> I was quite pleased with how clean all my code was until I started on Part 4
+(Maths and Comparisons), at which point it started to get a bit messy. I think the
+main reason for this is that I didn't want to mutate the line in any way in order
+to use shared borrows across all my functions, but as I result this meant I had
+to be very careful about my position in the line when I was parsing logical
+operators and prefix expressions. Had I been a bit more thoughtful about using
+exclusive borrows and then simplifying the line as I evaluate each expression, it
+would have been much cleaner.
+
+> For instance, I could process the line (OR GT "3 + "3 "1 LT + "5 "3 "9) as such:
+
+> STEP 0: (3 > (3 + 1) || (5 + 3) < 9)
+
+> STEP 1: (3 > 4) || (8 < 9)
+
+> STEP 2: (0 || 1)
+
+> STEP 3: (1)
+
+> I think this would have been a much simpler approach. I will explain below how my approach
+works, but it is quite complicated.
+
+> I think as I progressed through the assignment, the task of the get_value() function
+became increasingly complicated. Initially, I just intended it to work for variables
+and values, but as I soon found out there were a lot of other options: for instance booleans,
+queries, and prefix operations. My final solution involved using other helper functions
+(like get_boolean, get_query, process_prefix, etc...) in order to retrieve these different
+types, and then return not only the value as a f32, but also the current position in the line
+after getting that value. This was necessary for the case of prefixes, where there could be
+many tokens contributing to the one value, and we want to avoid processing the same token twice.
+I would do this differently now by actually mutating the line, and removing the tokens once
+they had been processed by the get_value function.
+
+> Another thing I would change is the redundancy in the check_condition function (which returns
+a Result<bool>) and the get_operands function (which returns a Result<(f32, f32, usize)>).
+The reason for this redundancy initially was because I wanted the main to simply have a function
+check_condition which returns true or false for a given condition.
+After I wrote the get_operands function as a recursive helper function for check_conditions,
+I realised that they are doing the same thing, it's just that check_condition is doing the
+outermost comparison. These could have been condensed into the one singular recursive function.
+
+## Other Comments
+If you want to let us know something else about your program, put it here!
+(Feel free to leave this blank)
+
+> I want to explain how my parser works for evaluate mathematical expressions, as I think
+it's quite complicated to look at. Basically, it recursively gets operands for each logical
+expression (OR/AND/LT/GT/EQ/NE). When there are nested logical expressions, the function
+recursively calls itself, and moves its "position" one further along. Once we have reached
+a level of recursion where an operand can be concretely evaluated, we calculate a "split"
+index (which is worked out by the usize value returned by get_value) which tells us where
+the first operand ends, and the second operand begins. This split index is then used to calculate
+the second operand, and we again recursively call the get_operands function whenever we see
+a logical expression(OR/AND/LT/GT/EQ/NE). Once the second operand has been calculated, the
+get_operands function must return an end_pos usize index which is used to figure out where we
+are along the line in a particular level of recursion.
+As I mentioned before, I think it would have been much simpler to mutate the line instead of
+trying to keep it the same and doing lots of tricky index stuff.
+
+> Another thing I wanted to note is that I kept my code modular by using a lib_crate (containing
+struct.rs and utils.rs) which was completely seperated from the rslogo crate, to keep the
+codebase clean.
+> I handled conditional flow (IF/WHILE) in the main.rs, and my method involved having a
+hashMap which, for a given condition, looked ahead in the code for a matching closing brace "]"
+and used this to either
+
+> 1) Skip the code block in a false condition
+
+> 2) Jump back at the end of a while loop to re-evaluate the condition (hashMap was used here to
+remember line numbers)
