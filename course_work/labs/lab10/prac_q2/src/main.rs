@@ -6,9 +6,10 @@ use std::collections::HashMap;
 
 // NOTE: You *may not* change the names or types of the members of this struct.
 //       You may only add lifetime-relevant syntax.
-pub struct SearchResult {
-    pub matches: Vec<&str>,
-    pub contains: &str
+#[derive(Debug)]
+pub struct SearchResult<'a, 'b> {
+    pub matches: Vec<&'a str>,
+    pub contains: &'b str
 }
 
 /// Returns a [`SearchResult`] struct, where the matches vec is
@@ -21,14 +22,53 @@ pub struct SearchResult {
 ///
 /// For example, In the string "Hello. I am Tom . Goodbye", the three
 /// sentences are "Hello", "I am Tom" and "Goodbye"
-fn find_sentences_containing(text: &str, contains: &str) -> SearchResult {
-    todo!()
+fn find_sentences_containing<'a, 'b>(text: &'a str, contains: &'b str) -> SearchResult<'a, 'b> {
+    let mut sentences = Vec::new();
+    let mut start = None;
+    let mut end = None;
+    let mut in_sentence = false;
+
+    for (i, c) in text.chars().enumerate() {
+        if c == '.' {
+            if let Some(_) = start {
+                end = Some(i);
+                in_sentence = false;
+            }
+        } else {
+            if !in_sentence {
+                start = Some(i);
+                in_sentence = true;
+            }
+        }
+        if let (Some(start_idx), Some(end_idx)) = (start, end) {
+            let sentence = text[start_idx..end_idx].trim();
+            if !sentence.is_empty() && sentence.contains(contains) {
+                sentences.push(sentence);
+            }
+            start = None;
+            end = None;
+        }
+    }
+
+    if let Some(start_idx) = start {
+        let sentence = &text[start_idx..].trim();
+        if !sentence.is_empty() {
+            sentences.push(sentence);
+        }
+    }
+    SearchResult{matches: sentences, contains}
 }
 
 /// Given a vec of [`SearchResult`]s, return a hashmap, which lists how many
-/// time each sentence occured in the search results.
-fn count_sentence_matches(searches: Vec<SearchResult>) -> HashMap<&str, i32> {
-    todo!()
+/// times each sentence occurred in the search results.
+fn count_sentence_matches<'a, 'b>(searches: Vec<SearchResult<'a, 'b>>) -> HashMap<&'a str, i32> {
+    let mut res: HashMap<&'a str, i32> = HashMap::new();
+    for search in searches {
+        for search_match in &search.matches {
+            *res.entry(search_match).or_insert(0) += 1;
+        }
+    }
+    res
 }
 
 
