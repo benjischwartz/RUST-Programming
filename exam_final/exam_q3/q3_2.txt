@@ -1,3 +1,21 @@
-1.
+1. The two approaches are slightly different in that the first is just creating
+a method associated with the `Point` struct, whereas the second is implementing a
+trait.
+The first approach is simple and is a method that clearly only works for `Point`.
+There is no additional libraries or importing required to implement the external
+`Add` trait (as we see with the line use `std::ops::Add`). However, this also makes
+it a bit less flexible since it's only tied to `Point` instances, and won't inherit
+a lot of the other functionality that you would with trait implementation.
+The second approach is a bit more complicated, but it means that it is more flexible
+since other types can implement the same `Add` trait with different meanings, and
+then `Point` instances could be added to these other types. The downside is that
+we are creating dependencies on another library, making the code less modular.
+I think the trait approach is best since it allows flexibility by making the `Add`
+operation more generic. Since a `Point` might be in a cartesian plane, perhaps
+we want to `Add` a `Point` to a `Vector` to create a `Line` (for example).
 
-2.
+2. As I mentioned before, in a more generic scenario where we are in a cartesian plane
+(in a Math library for example) and we need to do various operations with different
+types like vectors, complex numbers, matrices, points, etc. then it would be MUCH
+better to implement a trait since this functionality can be reused with other types,
+making it more extensible and generic by providing the common operation.

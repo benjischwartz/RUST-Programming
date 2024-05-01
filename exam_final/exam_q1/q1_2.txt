@@ -1,5 +1,11 @@
-1.
+1. The type of answer is `&str`.
 
-2.
+2. Rust has a property which allows blocks to be used as expressions, called
+'Block Expressions'.
 
-3.
+3. 'Block expressions'. It is a '{' followed by inner attributes, then statements,
+then an optional expression (final operand) and then a '}'. Basically, a block
+will execute each statement and then execute the expression, if given. If it doesn't
+end in an expression, its value is ().
+Each block introduces a new namespace scope. So essentially, blocks are always value
+expressions and evaluate the last expression.

@@ -1,3 +1,20 @@
-1.
+1. It doesn't compile since the Rust compiler can't statically tell what
+the type of `item` will be at run-time. This is Rust's type inference system
+which means we need to know its type at compile time, and since it could
+be either `i32` or `&str` we can't infer a single type. This makes Rust a
+statically typed language like C/C++, unlike a language like Python which is
+dynamically typed.
 
-2.
+2. A fix for this issue would be to explicitly tell the compiler that item
+implements Display by using `Box<dyn Display>`. That way, the compiler can concretely
+say at runtime that item implements Display.
+
+----------------------------------------------------------------------------
+fn print_something(cond: bool) {
+    let item: Box<dyn Display> = if cond {
+        Box::new(42)
+    } else {
+        Box::new("foo")
+    };
+    print_in_stars(item);
+}

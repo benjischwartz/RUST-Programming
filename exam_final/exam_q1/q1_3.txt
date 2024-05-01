@@ -1,3 +1,25 @@
-1.
+1. This doesn't compile due to the lifetime issue related to `y`.
+We see that `y` is created inside a block, so it's lifetime ends at the
+closing brace '}'. Since we assign a reference to `x` (which is a reference
+to `y`), we are left with a dangling reference since the lifetime of `x`
+lives until the end of main. In the `println!` statement we are trying to
+access a reference to `y` whose lifetime has already ended.
 
-2.
+2. It is both an advantage and disadvantage, depending on your use-case.
+
+It's advantageous in that it allows C/C++ developers to have more fine-tuned control
+over memory. In a context of embedded systems or latency-critical systems this
+is very important, and there could potentially be scenarios where we want
+to access memory that has already been 'freed'. That being said, you can achieve
+the same thing by using an `unsafe` block which bypasses safety checks such as
+lifetime issues. The other advantage is that C/C++ code can be integrated more
+smoothly into other systems since there are fewer safety checks.
+
+The disadvantages are mostly around compromising memory safety by allowing
+subtle bugs like dangling references from life-time issues, since these are often
+very tricky to pick up on and can lead to vulnerability issues which can be exploited
+by malicious third-parties. Additionally, having the compiler do these sorts of
+checks avoids a lot of the manual memory management and overhead that is required
+when writing C/C++, which scales with the size and complexity of the system.
+This means much more diligence is required in testing more error-prone C/C++ code
+that is manually manipulating memory.

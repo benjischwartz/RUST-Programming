@@ -1,3 +1,31 @@
-1.
+1. Rust's borrowing model prevents concurrency issues by enforcing something
+called the ownership system, as well as borrow checking. Concurrency issues are caused
+when multiple threads or processes are trying to get access to shared data simultaneously,
+and can create data races & deadlocks among other things.
+In Rust, each value stored in memory has a single owner, and mutable references '&mut'
+are exclusive meaning that only one thread/process can modify that data at a time.
+Shared references can be read concurrently since there is no danger of data races in that
+case. The borrow checker can analyze code statically (during compilation) and actually
+tell whether your code complies with the rules around references, mutability and ownership.
+Rust also has some very useful types for concurrent memory access such as `RwLock` and
+`Mutex`, which builds off of the ownership and borrowing model.
 
-2.
+2. It is possible in Rust through using `unsafe` code blocks. These are allowed to violate
+Rust's ownership and borrowing rules, such as manipulating raw pointers, de-referencing raw
+pointers and modifying mutable static variables.
+For example, we could have a `static mut` shared variable and have multiple threads updating
+it simultaneously like this:
+--------------------------------------
+static mut counter: i32 = 0;
+    for _ in 0..1000 {
+        let handle = thread::spawn(move || {
+            unsafe {
+                counter += 1; // Unsafe operation
+            }
+        });
+    }
+--------------------------------------
+
+In this very basic example, 1000 threads will be spawned and they are all updating the
+`counter` variable simultaneously. Since data races will occur, the final counter will not
+reach 1000 as we expect it to.

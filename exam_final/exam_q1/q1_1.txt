@@ -1,3 +1,20 @@
-1.
+1. You could use an `Option<String>` enum since what we are basically returning
+is a boolean value to indicate whether the index exists.
+We would return None in the first case, and otherwise we would have something
+like 'if let Some(arg) = args.get(index) { Some(arg.clone()) } '
 
-2.
+2. It would be better because it improves the handling of the case when we
+don't have a value. It is unclear from the function signature which returns
+(Output, Error) what exactly the error might be. It could mean the absence of a
+value, but it could also mean a number of other errors like an invalid String,
+for example. The caller doesn't actually know what these errors are defined as.
+On the other hand, an Option<String> enum implicitly communicates that we may
+not return a string for the given index, in which case it might be a None result.
+The user calling this function can then easily handle the case of an invalid
+index resulting in an empty result by using an `unwrap` pattern.
+One other thing to note, is that if there were multiple ways in which this function
+could fail, we should prefer to use a `Result<String, String>` so that we can
+specify what exactly the fail case was. But for such a basic function it can only
+really fail in one way, in that the index is not valid, thus we should use an
+`Option<String` instead.
+

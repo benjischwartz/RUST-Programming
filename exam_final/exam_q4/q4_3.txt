@@ -1,3 +1,11 @@
 macro_rules! cvar {
-
+    (($type:ty) $variable:ident = $value:expr; $($remainder:tt)*) => {
+        let $variable: $type = $value;
+        cvar! { $($remainder)* }
+    };
+    (($type:ty) mut $variable:ident = $value:expr; $($remainder:tt)*) => {
+        let mut $variable: $type = $value;
+        cvar! { $($remainder)* }
+    };
+    () => {}
 }

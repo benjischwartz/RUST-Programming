@@ -1,5 +1,7 @@
-1.
+1. The `Result<T, E>` and the `Option<T>` enums.
 
-2.
+2. The `?` operator returns the underlying value on a successful enum variant value.
+E.g. Ok(value) or Some(value), ? returns value.
 
-3.
+3. On an erroneous enum value, for Result<T, E> the function exits early and propagates
+the error, and for Option<T> that is a `None` the function exits early and returns `None`.
