@@ -22,4 +22,9 @@ Overall, the unsafe keyword instills a degree of caution around code, and means 
 developers are more likely to carefully review unsafe code blocks, to avoid any
 unforeseen errors.
 
-2.
+2. The `unsafe` system can introduce potential memory safety risks, since unsafe blocks
+violate Rust's memory safety guarantee and can be abused to create undefined behaviour. 
+If a programmer does not carefully consider the implications of their code, they could 
+easily cause an error. Code in `unsafe` blocks can often be hard to reason about, and so 
+they should be approached with caution and used only when absolutely necessary.
+
