@@ -1,0 +1,46 @@
+1)
+Rust definitely allows you to become a great programmer since using
+a strongly-typed language teaches you a lot about the underlying mechanics
+of how a computer works. The enforcement of types gives early error detection,
+which can allow students to quickly identify and correct mistakes.
+Working in a modern language is also great since it gives you an in-demand skill-set.
+Rust also has a whole host of features inspired by other languages, and so
+many of the concepts used in Rust also carry through when one needs to use another language.
+
+2)
+Rust does provide compact memory use, and the ownership model means we can have
+very precise memory management without a garbage collector using up extra resources
+(like in Java). Zero-cost abstractions make it great in the context of embedded systems
+and latency-critical applications.
+On the flip-side, it can be difficult navigating Rust's ownership rules, and can make
+code quite complex with lifetime management.
+
+3)
+Rust definitely provides performant software by providing control over low-level
+memory management, and being able to interact with hardware directly. In cases where
+unsafe behaviour (like de-referencing raw pointers) may be necessary, Rust allows
+this through the `unsafe` keyword.
+Rust provides performant software on a single CPU core (i.e. multithreaded) as well
+as across cores by synchronization mechanisms such as Mutex and RwLock.
+On the other hand, achieving optimal performance in Rust still requires a deep understanding
+of memory management and concurrency primitives, so there is a steep learning curve.
+
+4)
+Wanting correct and memory-safe software makes Rust a great candidate since the borrow checker
+and ownership system avoids memory bugs at compile-time. It removes the need for a garbage
+collector since objects are destroyed once their life-time ends.
+
+5)
+It is definitely a great language to learn as a challenge, and I would argue it ties
+together a lot of the concepts that any CS student has come across in other languages,
+so it acts as a good academic tool. Although it requires persistence and interest in learning
+the details of memory management, and the ownership system, it highlights related flaws in
+other languages.
+
+In conclusion, the writer makes valid points both for or against, but I would argue that
+the arguments for using Rust are significantly stronger than the arguments against. Not only
+is the language, performant, memory-safe, flexible, and intuitive, but once learned properly
+software development can be rapid.
+The writer's arguments against using Rust stem mainly from difficulty in learning the language
+or lack of interest, but any student with a keen desire for improving their abilities
+should embrace such a challenge.

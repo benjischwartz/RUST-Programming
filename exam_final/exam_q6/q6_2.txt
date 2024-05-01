@@ -1,5 +1,40 @@
-1.
+1. This code's obvious problem comes from using raw pointers seen by the
+`*mut RcBox<T>` ptr type. Using raw pointers can create dangling pointers
+and risks potential memory leaks. Although into_raw and from_raw are used
+to convert from box to raw pointers, this is error-prone.
+Further, the implementation for `Clone` is unsafe, since it directly increments
+the reference count without ensuring that any other thread/process is doing
+it at the same time, which could result in data races (for example multiple threads
+cloning at the exact same time might override the counter of the previous,
+meaning the actual count is less than it should be). The increment should be
+atomic by using a synchronization mechanism.
+In both of the Deref functions, there is not checking for whether the raw pointer
+is null, meaning we could be accessing garbage memory by a null pointer de-reference.
+As in `Clone`, `Drop` doesn't ensure that decrementing the reference count is atomic,
+and so we need to ensure that there is some sort of Mutex or synchronization
+mechanism to avoid race conditions in multithreaded contexts.
 
-2.
+2. As mentioned above, both the `Clone` and `Drop` implementations need to be
+atomic to avoid data races where multiple threads are concurrently cloning/dropping
+the `Rc<T>`. We need to make sure there is a synchronization mechanism like a Mutex
+to ensure the count is consistent across threads, and avoids a lot of the potential
+null pointer or memory leak issues associated with having data-races for the count.
 
 3.
+// Clone the RC in 1000 threads
+---------------------------------------
+fn main() {
+    let my_rc = Arc::new(Rc::new(0));
+    let mut threads = vec![];
+    for _ in 0..1000 {
+        let rc_clone = Arc::clone(&my_rc);
+        let t = thread::spawn(move || {
+            let _ = my_rc.clone();
+        });
+        threads.push(t);
+    }
+    for t in threads {
+       t.join().unwrap();
+    }
+    let final_count = unsafe { (*my_rc.ptr).count };
+}

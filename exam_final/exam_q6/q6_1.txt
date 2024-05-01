@@ -1,3 +1,25 @@
-1.
+1. Having an unsafe keyword does not add unnecessary noise and actually
+is a big improvement over C/C++ code, despite the manual checking that is needed
+regardless.
+
+The main reason why `unsafe` is useful is it is explicit. It indicates a clear
+intention that the author has indicated certain operations within a block need
+to bypass Rust's safety checks and mean that other programmers looking at the code
+can clearly see that a particular safety issue has been considered. In the best
+case this means that the enclosed code is safe since the programmer has carefully
+thought through its implications, and in the worst case it points to a possible
+vulnerability in the code that needs to be addressed.
+
+The unsafe keyword ties in with Rust's ownership and borrowing system by providing
+compile time checking to ensure safe code. By design, code that does not violate
+the ownership/borrowing system is pretty much guaranteed to be safe from data races/
+concurrency bugs, however there are sometimes cases in which certain operations which
+can't be verified at compile time are necessary and indeed safe, such as de-referencing
+raw pointers. Code such as C/C++ can be equally unsafe, but it is much harder to
+identify possible problematic areas, than in a codebase which has `unsafe` keywords.
+
+Overall, the unsafe keyword instills a degree of caution around code, and means that
+developers are more likely to carefully review unsafe code blocks, to avoid any
+unforeseen errors.
 
 2.
