@@ -1,16 +1,14 @@
 # Rust Multi-threaded Spreadsheet
 
-## Final Product:
-
-### Basic Functionality
+## Basic Functionality
 
 ![basic_function.gif](img/basic_function.gif)
 
-### Circular Dependency Handling
+## Circular Dependency Handling
 
 ![circular_dependencies.gif](img/circular_dependencies.gif)
 
-### Multi-layer Dependencies
+## Multi-layer Dependencies
 
 ![multilayer_dependencies.gif](img/multilayer_dependencies.gif)
 
